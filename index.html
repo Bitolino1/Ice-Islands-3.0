@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ice Islands</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0ea5e9">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f172a; color: #e2e8f0; display: flex;
+    flex-direction: column; align-items: center; min-height: 100vh;
+  }
+  h1 { margin: 14px 0 6px; font-size: 22px; letter-spacing: .5px; }
+  h1 span { color: #38bdf8; }
+  #stage { position: relative; }
+  canvas {
+    background: #87ceeb; border-radius: 14px; cursor: pointer;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5); display: block;
+  }
+  #bar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin: 10px 0; max-width: 900px; justify-content: center;
+  }
+  input, button, select {
+    font: inherit; border-radius: 9px; border: none; padding: 8px 12px;
+  }
+  input[type=text] { width: 150px; }
+  button {
+    background: #1e293b; color: #e2e8f0; cursor: pointer;
+    border: 1px solid #334155; transition: .15s;
+  }
+  button:hover { background: #334155; }
+  button.room { background: #0ea5e9; color: #04293a; font-weight: 600; border: none; }
+  button.room.active { background: #f8fafc; color: #0b3b52; }
+  #chatrow { display: flex; gap: 8px; }
+  #chat { width: 320px; }
+  .hint { font-size: 12px; color: #94a3b8; max-width: 880px; text-align: center; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #0000; cursor: pointer; }
+  .swatch.sel { border-color: #f8fafc; }
+  #palette { display: flex; gap: 6px; }
+  #ballbtn.armed { background: #38bdf8; color: #04293a; font-weight: 600; border-color: #38bdf8; }
+  canvas.aim { cursor: crosshair; }
+  #shopbtn { background: #22c55e; color: #04210f; font-weight: 600; border: none; }
+  #invite { background: #5865F2; color: #fff; font-weight: 600; border: none; }
+  #install { background: #a855f7; color: #fff; font-weight: 600; border: none; }
+  #accountbtn { background: #f59e0b; color: #3a2400; font-weight: 600; border: none; }
+  #auth { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 11; }
+  #auth.open { display: flex; }
+  .authbox { background: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 20px; width: min(380px, 92vw); }
+  .authbox input { width: 100%; margin: 8px 0; }
+  .authmsg { font-size: 13px; color: #94a3b8; margin: 6px 0 4px; }
+  .authmsg.err { color: #f87171; }
+  .authmsg.ok { color: #34d399; }
+  .authbtns { display: flex; gap: 8px; margin-top: 10px; }
+  .authbtns button { flex: 1; }
+  #doregister { background: #22c55e; color: #04210f; font-weight: 600; border: none; }
+  #dologin { background: #0ea5e9; color: #04293a; font-weight: 600; border: none; }
+  #coins { background: #1e293b; border: 1px solid #334155; border-radius: 9px; padding: 8px 12px; font-weight: 600; }
+  #shop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: center; justify-content: center; z-index: 10; }
+  #shop.open { display: flex; }
+  .shopbox { background: #0f172a; border: 1px solid #334155; border-radius: 16px; padding: 18px; width: min(580px, 92vw); max-height: 84vh; overflow: auto; }
+  .shophead { display: flex; justify-content: space-between; align-items: center; }
+  .shophead h2 { margin: 0; font-size: 20px; }
+  #shopclose { background: #1e293b; border: 1px solid #334155; }
+  .shopcat { margin: 14px 0 6px; color: #7dd3fc; font-weight: 600; font-size: 14px; }
+  .shopgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 10px; }
+  .card { background: #1e293b; border-radius: 12px; padding: 10px; text-align: center; }
+  .card .ic { font-size: 34px; line-height: 1.2; }
+  .card .nm { font-size: 13px; margin: 2px 0 8px; min-height: 30px; display: flex; align-items: center; justify-content: center; }
+  .card button { width: 100%; background: #0ea5e9; color: #04293a; font-weight: 600; border: none; }
+  .card button:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .card button.on { background: #f59e0b; color: #3a2400; }
+</style>
+</head>
+<body>
+  <h1>🐧 Ice <span>Islands</span></h1>
+
+  <div id="bar">
+    <input type="text" id="name" placeholder="Seu nome" maxlength="16">
+    <div id="palette"></div>
+    <button id="apply">Aplicar</button>
+    <button class="room" data-room="vila">🏠 Praça</button>
+    <button class="room" data-room="porto">⚓ Porto dos Barcos</button>
+    <button class="room" data-room="ilha">🏝️ Ilha Secreta</button>
+    <button id="shopbtn">🛍️ Loja</button>
+    <span id="coins">🪙 0</span>
+    <button id="invite">🔗 Convidar</button>
+    <button id="install">📥 Instalar app</button>
+    <button id="accountbtn">👤 Conta</button>
+  </div>
+
+  <div id="stage">
+    <canvas id="cv" width="900" height="540"></canvas>
+  </div>
+
+  <div id="bar">
+    <div id="chatrow">
+      <input type="text" id="chat" placeholder="Digite e aperte Enter para falar..." maxlength="120">
+      <button id="send">Falar</button>
+    </div>
+    <button data-emote="👋">👋 Aceno</button>
+    <button data-emote="💃">💃 Dança</button>
+    <button data-emote="❤️">❤️ Coração</button>
+    <button id="ballbtn">❄️ Bola de neve</button>
+  </div>
+  <p class="hint">Clique no cenário para <b>andar</b>. Aperte <b>❄️ Bola de neve</b> e clique no alvo para <b>atirar</b> (ou use <b>Shift + clique</b>). Troque de sala pelos botões, ou clique na <b>porta da Taverna</b> (casinha vermelha) ou da <b>Loja</b> (casinha amarela) na Praça para entrar. Abra a <b>🛍️ Loja</b> pra comprar e vestir roupas!</p>
+
+  <div id="shop">
+    <div class="shopbox">
+      <div class="shophead">
+        <h2>🛍️ Loja do Ice Islands</h2>
+        <button id="shopclose">✕ Fechar</button>
+      </div>
+      <div id="shopitems"></div>
+    </div>
+  </div>
+
+  <div id="auth">
+    <div class="authbox">
+      <div class="shophead">
+        <h2>👤 Sua conta</h2>
+        <button id="authclose">✕</button>
+      </div>
+      <p class="authmsg" id="authmsg">Crie uma conta pra salvar seu pinguim, moedas e roupas <b>pra sempre</b>!</p>
+      <input type="text" id="authuser" placeholder="Usuário (3 a 16 letras/números)" maxlength="16" autocomplete="username">
+      <input type="password" id="authpass" placeholder="Senha (mínimo 4)" maxlength="32" autocomplete="current-password">
+      <div class="authbtns">
+        <button id="doregister">Criar conta</button>
+        <button id="dologin">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const cv = document.getElementById('cv');
+let ctx = cv.getContext('2d');   // 'let' porque os cenarios sao pintados num canvas escondido
+const W = cv.width, H = cv.height;
+
+let myId = null;
+let myRoom = 'vila';
+const players = {};   // id -> {name,color,x,y,tx,ty,msg,msgT,emote,emoteT}
+const balls = [];     // {x,y,tx,ty,t}
+let myColor = '#3b82f6';
+let CATALOG = {};     // id -> {name, price, slot, icon}
+let coins = 0;
+let owned = [];
+
+// ---------- WebSocket ----------
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+// A conexao pode cair (aba em segundo plano, rede, servidor reiniciando). Em vez de travar,
+// o jogo reconecta sozinho e pede ao servidor o estado de onde parou (token de sessao).
+let ws = null;
+let online = false;
+let retry = 0, retryTimer = null, pongTimer = null;
+let sessionToken = null;
+try { sessionToken = sessionStorage.getItem('ice_token'); } catch (e) {}
+
+function connect() {
+  clearTimeout(retryTimer);
+  if (ws && ws.readyState <= 1) return;               // ja conectando ou conectado
+  const sock = new WebSocket(`${proto}://${location.host}/ws`);
+  ws = sock;
+  sock.onopen = () => {
+    if (ws !== sock) return;
+    online = true; retry = 0;
+    if (sessionToken) sock.send(JSON.stringify({ t: 'resume', token: sessionToken }));
+  };
+  sock.onmessage = (ev) => { if (ws === sock) onMessage(ev); };
+  sock.onclose = () => {
+    if (ws !== sock) return;
+    online = false;
+    retryTimer = setTimeout(connect, Math.min(8000, 500 * 2 ** retry++));
+  };
+}
+function reconnectNow() {
+  clearTimeout(pongTimer); pongTimer = null;
+  const old = ws; ws = null; online = false; retry = 0;
+  if (old) { try { old.close(); } catch (e) {} }
+  connect();
+}
+// Confere se a conexao esta viva de verdade (as vezes ela parece aberta, mas morreu).
+function checkAlive(wait) {
+  if (!ws || ws.readyState > 1) { retry = 0; connect(); return; }
+  if (ws.readyState !== 1 || pongTimer) return;
+  ws.send(JSON.stringify({ t: 'ping' }));
+  pongTimer = setTimeout(reconnectNow, wait);
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAlive(4000); });
+window.addEventListener('focus', () => checkAlive(4000));
+window.addEventListener('pageshow', () => checkAlive(4000));
+window.addEventListener('online', () => checkAlive(4000));
+setInterval(() => checkAlive(10000), 20000);          // tambem mantem a conexao acordada
+
+function onMessage(ev) {
+  const m = JSON.parse(ev.data);
+  if (m.t === 'pong') { clearTimeout(pongTimer); pongTimer = null; return; }
+  if (m.t === 'session') { sessionToken = m.token; try { sessionStorage.setItem('ice_token', m.token); } catch (e) {} return; }
+  if (m.t === 'init') {
+    myId = m.id; myRoom = m.room;
+    for (const k in players) delete players[k];
+    balls.length = 0;
+    for (const p of m.players) addPlayer(p);
+    syncRoomButtons();
+  } else if (m.t === 'join') {
+    addPlayer(m.player);
+  } else if (m.t === 'leave') {
+    delete players[m.id];
+  } else if (m.t === 'move') {
+    const p = players[m.id]; if (p) { p.tx = m.x; p.ty = m.y; }
+  } else if (m.t === 'update') {
+    const p = players[m.id]; if (p) { p.name = m.name; p.color = m.color; }
+  } else if (m.t === 'chat') {
+    const p = players[m.id]; if (p) { p.msg = m.text; p.msgT = performance.now(); }
+  } else if (m.t === 'emote') {
+    const p = players[m.id]; if (p) { p.emote = m.e; p.emoteT = performance.now(); }
+  } else if (m.t === 'ball') {
+    const p = players[m.id];
+    const fx = p ? p.x : W/2, fy = p ? p.y : H/2;
+    balls.push({ x: fx, y: fy, tx: m.x, ty: m.y, t: 0 });
+  } else if (m.t === 'catalog') {
+    CATALOG = m.items; buildShop();
+  } else if (m.t === 'wallet') {
+    coins = m.coins; owned = m.owned; updateCoins(); buildShop();
+  } else if (m.t === 'outfit') {
+    const p = players[m.id]; if (p) p.outfit = m.outfit;
+    if (m.id === myId) buildShop();
+  } else if (m.t === 'auth_ok') {
+    document.getElementById('accountbtn').textContent = '👤 ' + m.user;
+    document.getElementById('name').value = m.user;
+    const msg = document.getElementById('authmsg');
+    msg.className = 'authmsg ok';
+    msg.textContent = 'Logado como ' + m.user + '! Seu progresso agora fica salvo. 🐧';
+    if (!m.resumed) setTimeout(() => document.getElementById('auth').classList.remove('open'), 1300);
+  } else if (m.t === 'name_err') {
+    document.getElementById('name').value = m.name;      // volta pro nome que continua valendo
+    toast('⚠️ ' + m.reason);
+  } else if (m.t === 'auth_err') {
+    const msg = document.getElementById('authmsg');
+    msg.className = 'authmsg err';
+    msg.textContent = '⚠️ ' + m.reason;
+  }
+};
+connect();
+
+function addPlayer(p) {
+  players[p.id] = { name: p.name, color: p.color, x: p.x, y: p.y, tx: p.x, ty: p.y,
+                    msg: '', msgT: 0, emote: '', emoteT: 0, outfit: p.outfit || {} };
+}
+// Aviso rapido no rodape da tela
+function toast(text) {
+  const el = document.createElement('div');
+  el.textContent = text;
+  el.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:20;' +
+    'background:#7f1d1d;color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;' +
+    'box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:90vw;text-align:center';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+
+// ---------- Input ----------
+// Botao "Bola de neve": arma um tiro; o proximo clique no cenario atira (em vez de andar).
+// Apertar o botao de novo cancela.
+let ballArmed = false;
+function setBallArmed(on) {
+  ballArmed = on;
+  const btn = document.getElementById('ballbtn');
+  btn.classList.toggle('armed', on);
+  btn.textContent = on ? '🎯 Clique no alvo' : '❄️ Bola de neve';
+  cv.classList.toggle('aim', on);
+}
+document.getElementById('ballbtn').onclick = () => setBallArmed(!ballArmed);
+
+cv.addEventListener('click', (e) => {
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (W / r.width);
+  const y = (e.clientY - r.top) * (H / r.height);
+  if (e.shiftKey || ballArmed) {
+    setBallArmed(false);
+    send({ t: 'ball', x, y });
+    balls.push({ x: players[myId]?.x ?? W/2, y: players[myId]?.y ?? H/2, tx: x, ty: y, t: 0 });
+  } else {
+    // Clicou numa porta? Anda ate ela e entra ao chegar.
+    const door = (DOORS[myRoom] || []).find(d => x >= d.x && x <= d.x + d.w && y >= d.y && y <= d.y + d.h);
+    const gx = door ? door.stand[0] : x, gy = door ? door.stand[1] : y;
+    pendingDoor = door ? { to: door.to, open: door.open, x: gx, y: gy, room: myRoom, until: performance.now() + 6000 } : null;
+    const p = players[myId]; if (p) { p.tx = gx; p.ty = gy; }
+    send({ t: 'move', x: gx, y: gy });
+  }
+});
+
+// Pontos clicaveis do cenario: "to" leva pra outra sala, "open" abre uma tela (a loja);
+// "stand" e onde o personagem para antes de entrar/abrir.
+const DOORS = {
+  vila:    [{ x: 138, y: 232, w: 54, h: 72, to: 'taverna', stand: [165, 312] },
+            { x: 423, y: 232, w: 54, h: 72, to: 'loja', stand: [450, 312] }],
+  taverna: [{ x: 796, y: 108, w: 84, h: 150, to: 'vila', stand: [838, 276] }],
+  loja:    [{ x: 796, y: 108, w: 84, h: 150, to: 'vila', stand: [838, 276] },
+            { x: 334, y: 150, w: 256, h: 168, open: 'shop', stand: [462, 340] },    // caixa
+            { x: 28, y: 44, w: 282, h: 200, open: 'shop', stand: [170, 280] },      // estante de chapeus
+            { x: 614, y: 52, w: 160, h: 154, open: 'shop', stand: [694, 280] }],    // painel de pescoco
+};
+let pendingDoor = null;
+function checkDoor() {
+  if (!pendingDoor) return;
+  const p = players[myId];
+  if (!p || pendingDoor.room !== myRoom || performance.now() > pendingDoor.until) { pendingDoor = null; return; }
+  if (Math.hypot(p.x - pendingDoor.x, p.y - pendingDoor.y) < 6) {
+    if (pendingDoor.open === 'shop') shopEl.classList.add('open');
+    else send({ t: 'room', room: pendingDoor.to });
+    pendingDoor = null;
+  }
+}
+
+document.getElementById('apply').onclick = () => {
+  const name = document.getElementById('name').value.trim();
+  send({ t: 'hello', name, color: myColor });
+};
+document.querySelectorAll('.room').forEach(b => b.onclick = () => {
+  send({ t: 'room', room: b.dataset.room });
+});
+document.querySelectorAll('[data-emote]').forEach(b => b.onclick = () => {
+  send({ t: 'emote', e: b.dataset.emote });
+  const p = players[myId]; if (p) { p.emote = b.dataset.emote; p.emoteT = performance.now(); }
+});
+const chatInput = document.getElementById('chat');
+function sendChat() {
+  const text = chatInput.value.trim();
+  if (text) { send({ t: 'chat', text }); chatInput.value = ''; }
+}
+document.getElementById('send').onclick = sendChat;
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+// color palette
+const PALETTE = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+const pal = document.getElementById('palette');
+PALETTE.forEach((c, i) => {
+  const s = document.createElement('div');
+  s.className = 'swatch' + (i === 0 ? ' sel' : '');
+  s.style.background = c;
+  s.onclick = () => { myColor = c; document.querySelectorAll('.swatch').forEach(x => x.classList.remove('sel')); s.classList.add('sel'); };
+  pal.appendChild(s);
+});
+function syncRoomButtons() {
+  document.querySelectorAll('.room').forEach(b =>
+    b.classList.toggle('active', b.dataset.room === myRoom));
+}
+
+// ---------- Loja / Roupas ----------
+const shopEl = document.getElementById('shop');
+document.getElementById('shopbtn').onclick = () => shopEl.classList.toggle('open');
+document.getElementById('shopclose').onclick = () => shopEl.classList.remove('open');
+function updateCoins() { document.getElementById('coins').textContent = '🪙 ' + coins; }
+
+// Botao Convidar: copia o link do site pra mandar no Discord / email
+document.getElementById('invite').onclick = async () => {
+  const btn = document.getElementById('invite');
+  const link = location.href;
+  let ok = false;
+  try { await navigator.clipboard.writeText(link); ok = true; } catch (e) {}
+  if (!ok) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = link; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) {}
+  }
+  btn.textContent = ok ? '✅ Link copiado!' : '🔗 Selecione e copie';
+  setTimeout(() => { btn.textContent = '🔗 Convidar'; }, 2000);
+};
+
+// Conta: registrar e logar (progresso salvo pra sempre no servidor)
+const authEl = document.getElementById('auth');
+document.getElementById('accountbtn').onclick = () => authEl.classList.add('open');
+document.getElementById('authclose').onclick = () => authEl.classList.remove('open');
+document.getElementById('doregister').onclick = () => send({
+  t: 'register',
+  user: document.getElementById('authuser').value,
+  pass: document.getElementById('authpass').value,
+});
+document.getElementById('dologin').onclick = () => send({
+  t: 'login',
+  user: document.getElementById('authuser').value,
+  pass: document.getElementById('authpass').value,
+});
+
+// Instalar como app (PWA) — funciona no Mac e no Windows
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; });
+document.getElementById('install').onclick = async () => {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+  } else {
+    alert('Como instalar o Ice Islands:\n\n' +
+          '• Chrome / Edge (Windows e Mac): clique no ícone de instalar na barra de endereço, ou no menu ⋮ → "Instalar Ice Islands".\n\n' +
+          '• Safari (Mac): menu Compartilhar → "Adicionar ao Dock".');
+  }
+};
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install').textContent = '✅ Instalado';
+});
+
+// Registra o service worker (necessario pra instalar como app)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+
+const SLOT_NAMES = { hat: '🎩 Chapéus', glasses: '🕶️ Óculos', neck: '🧣 Pescoço', skin: '🐾 Skins' };
+
+function buildShop() {
+  const wrap = document.getElementById('shopitems');
+  wrap.innerHTML = '';
+  const out = (players[myId] && players[myId].outfit) || {};
+  for (const slot of ['hat', 'glasses', 'neck', 'skin']) {
+    const title = document.createElement('div');
+    title.className = 'shopcat'; title.textContent = SLOT_NAMES[slot];
+    wrap.appendChild(title);
+    const grid = document.createElement('div'); grid.className = 'shopgrid';
+    for (const id in CATALOG) {
+      const it = CATALOG[id];
+      if (it.slot !== slot) continue;
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `<div class="ic">${it.icon}</div><div class="nm">${it.name}</div>`;
+      if (slot === 'skin' && SKINS[id]) {            // mostra a skin de verdade, nao um emoji
+        const ic = card.querySelector('.ic'); ic.textContent = '';
+        const mini = document.createElement('canvas'); mini.width = 136; mini.height = 168;
+        mini.style.cssText = 'width:68px;height:84px;background:none;box-shadow:none;border-radius:0;margin:0 auto;cursor:default';
+        const screen = ctx; ctx = mini.getContext('2d');
+        try { ctx.scale(2, 2); drawBody(34, 53, (players[myId] && players[myId].color) || myColor, id); } finally { ctx = screen; }
+        ic.appendChild(mini);
+      }
+      const btn = document.createElement('button');
+      if (!owned.includes(id)) {
+        btn.textContent = '🪙 ' + it.price;
+        btn.disabled = coins < it.price;
+        btn.onclick = () => send({ t: 'buy', item: id });
+      } else if (out[slot] === id) {
+        btn.textContent = 'Tirar'; btn.className = 'on';
+        btn.onclick = () => send({ t: 'equip', slot, item: '' });
+      } else {
+        btn.textContent = 'Vestir';
+        btn.onclick = () => send({ t: 'equip', slot, item: id });
+      }
+      card.appendChild(btn);
+      grid.appendChild(card);
+    }
+    wrap.appendChild(grid);
+  }
+}
+
+// ---------- Render ----------
+// ---------- Cenarios (desenho cartoon: contorno escuro, cores chapadas, neve e texturas) ----------
+// Cada cenario e pintado UMA vez num canvas escondido e depois so copiado a cada quadro.
+const INK = '#17324d';
+function seeded(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function ink(fill, lw = 3) {
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.lineWidth = lw; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+}
+function vgrad(y0, y1, c0, c1) {
+  const g = ctx.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, c0); g.addColorStop(1, c1); return g;
+}
+function blob(pts) {
+  const n = pts.length;
+  ctx.beginPath();
+  ctx.moveTo((pts[n - 1][0] + pts[0][0]) / 2, (pts[n - 1][1] + pts[0][1]) / 2);
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    ctx.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+  }
+  ctx.closePath();
+}
+function line(x0, y0, x1, y1, col, lw) {
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+}
+function cloud(x, y, s) {
+  const parts = [[-34, 4, 24, 15], [-8, -8, 28, 21], [22, 2, 26, 16], [-4, 8, 40, 12]];
+  ctx.strokeStyle = INK; ctx.lineWidth = 6;
+  for (const [dx, dy, rx, ry] of parts) { ell(x + dx * s, y + dy * s, rx * s, ry * s); ctx.stroke(); }
+  ctx.fillStyle = '#fff';
+  for (const [dx, dy, rx, ry] of parts) { ell(x + dx * s, y + dy * s, rx * s, ry * s); ctx.fill(); }
+  ctx.fillStyle = '#dcecf9'; ell(x - 2 * s, y + 13 * s, 34 * s, 5 * s); ctx.fill();
+}
+function peak(cx, baseY, w, h, col) {
+  poly([[cx - w / 2, baseY], [cx, baseY - h], [cx + w / 2, baseY]]); ink(col);
+  const k = 0.36, hw = w / 2 * k, y = baseY - h + h * k;      // capa de neve
+  poly([[cx, baseY - h], [cx + hw, y], [cx + hw * 0.45, y - 9], [cx + hw * 0.1, y + 5],
+        [cx - hw * 0.35, y - 8], [cx - hw, y]]); ink('#ffffff', 2.5);
+}
+function snowGround(yTop, seed) {
+  ctx.beginPath(); ctx.moveTo(-10, yTop + 6);
+  ctx.bezierCurveTo(150, yTop - 14, 300, yTop + 12, 450, yTop);
+  ctx.bezierCurveTo(600, yTop - 12, 760, yTop + 10, 910, yTop - 4);
+  ctx.lineTo(910, H + 10); ctx.lineTo(-10, H + 10); ctx.closePath();
+  ink(vgrad(yTop, H, '#ffffff', '#d3e8f8'));
+  const r = seeded(seed);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 16; i++) {                                // ondulacoes da neve
+    const x = r() * W, y = yTop + 30 + r() * (H - yTop - 40), w = 40 + r() * 90;
+    ctx.strokeStyle = 'rgba(141,190,228,.45)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x, y - 9, x + w / 2, y); ctx.stroke();
+  }
+  for (let i = 0; i < 260; i++) {                               // graozinhos
+    const x = r() * W, y = yTop + 14 + r() * (H - yTop - 14);
+    ctx.fillStyle = r() < 0.5 ? 'rgba(150,196,232,.5)' : 'rgba(255,255,255,.95)';
+    ell(x, y, 1 + r() * 1.4, 1 + r() * 1.2); ctx.fill();
+  }
+}
+function pine(x, baseY, s) {
+  ctx.beginPath(); ctx.rect(x - 6 * s, baseY - 16 * s, 12 * s, 18 * s); ink('#7a4a25');
+  const tiers = [[46, 20, 58], [38, 52, 50], [28, 82, 44]];     // [meia-largura, altura da base, altura]
+  for (const [hw, up, th] of tiers) {
+    poly([[x - hw * s, baseY - up * s + 4 * s], [x, baseY - (up + th) * s], [x + hw * s, baseY - up * s + 4 * s]]);
+    ink('#2f9e6b');
+    ctx.fillStyle = '#237a52';                                  // sombra de um lado
+    poly([[x, baseY - (up + th) * s + 6 * s], [x + hw * s - 7 * s, baseY - up * s + 1 * s], [x, baseY - up * s + 1 * s]]); ctx.fill();
+    blob([[x - hw * 0.5 * s, baseY - (up + th * 0.45) * s], [x, baseY - (up + th + 3) * s],
+          [x + hw * 0.5 * s, baseY - (up + th * 0.45) * s], [x + 5 * s, baseY - (up + th * 0.32) * s],
+          [x, baseY - (up + th * 0.5) * s], [x - 6 * s, baseY - (up + th * 0.3) * s]]);
+    ink('#fff', 2);
+  }
+  ctx.fillStyle = '#fff'; ell(x, baseY + 2 * s, 30 * s, 7 * s); ctx.fill();
+}
+function hangSign(text) {
+  ctx.font = "bold 24px 'Trebuchet MS', 'Segoe UI', sans-serif";
+  const w = Math.max(210, ctx.measureText(text).width + 56), x0 = W / 2 - w / 2;
+  line(x0 + 26, -4, x0 + 26, 26, '#6b4a2b', 4); line(x0 + w - 26, -4, x0 + w - 26, 26, '#6b4a2b', 4);
+  roundRect(x0, 24, w, 46, 10); ink('#c98b4b');
+  line(x0 + 12, 38, x0 + w - 14, 38, 'rgba(120,74,37,.45)', 2);
+  line(x0 + 16, 58, x0 + w - 20, 58, 'rgba(120,74,37,.45)', 2);
+  ctx.fillStyle = '#fff'; ell(x0 + w / 2, 25, w / 2 - 18, 6, Math.PI, Math.PI * 2); ctx.fill();   // nevinha em cima
+  ctx.fillStyle = '#8a5a32'; ell(x0 + 11, 47, 2.4, 2.4); ctx.fill(); ell(x0 + w - 11, 47, 2.4, 2.4); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = INK; ctx.lineWidth = 5; ctx.strokeText(text, W / 2, 48);
+  ctx.fillStyle = '#fff'; ctx.fillText(text, W / 2, 48);
+  ctx.textBaseline = 'alphabetic';
+}
+
+// ----- pecas da Praca -----
+function roofSnow(cx, eaveY, half, rise) {
+  const L = [cx - half, eaveY], A = [cx, eaveY - rise], R = [cx + half, eaveY];
+  const iA = [cx, eaveY - rise + 26], n = 5;
+  ctx.beginPath(); ctx.moveTo(L[0], L[1]); ctx.lineTo(A[0], A[1]); ctx.lineTo(R[0], R[1]);
+  const seg = (p, q) => {
+    for (let i = 1; i <= n; i++) {
+      const t0 = (i - 1) / n, t1 = i / n;
+      const mx = p[0] + (q[0] - p[0]) * (t0 + t1) / 2, my = p[1] + (q[1] - p[1]) * (t0 + t1) / 2;
+      ctx.quadraticCurveTo(mx, my + 13, p[0] + (q[0] - p[0]) * t1, p[1] + (q[1] - p[1]) * t1);
+    }
+  };
+  const iR = [cx + half - 26, eaveY + 3], iL = [cx - half + 26, eaveY + 3];
+  ctx.lineTo(iR[0], iR[1]); seg(iR, iA); seg(iA, iL);
+  ctx.closePath(); ink('#ffffff');
+}
+function windowBox(x, y, w, h) {
+  roundRect(x, y, w, h, 5); ink(vgrad(y, y + h, '#fff3b8', '#ffd66b'));
+  line(x + w / 2, y + 2, x + w / 2, y + h - 2, INK, 2.5); line(x + 2, y + h / 2, x + w - 2, y + h / 2, INK, 2.5);
+  roundRect(x - 4, y + h - 1, w + 8, 7, 3.5); ink('#fff', 2);
+}
+function house(cx, baseY, w, h, wall, wallDark, roof, shop, sign) {
+  const x0 = cx - w / 2, top = baseY - h;
+  roundRect(x0, top, w, h, 5); ink(wall);
+  for (let y = top + 16; y < baseY - 6; y += 16) line(x0 + 5, y, x0 + w - 5, y, wallDark, 2);  // tabuas
+  // chamine
+  ctx.beginPath(); ctx.rect(cx + w * 0.2, top - 64, 24, 46); ink('#a8553f');
+  roundRect(cx + w * 0.2 - 5, top - 71, 34, 11, 5); ink('#fff', 2.5);
+  // telhado
+  poly([[x0 - 18, top + 8], [cx, top - 74], [x0 + w + 18, top + 8]]); ink(roof);
+  roofSnow(cx, top + 8, w / 2 + 22, 86);
+  // pingentes de gelo
+  for (let i = 0; i < 7; i++) {
+    const ix = x0 - 8 + (w + 16) * (i + 0.5) / 7, len = 9 + (i * 7) % 9;
+    poly([[ix - 4, top + 10], [ix + 4, top + 10], [ix, top + 10 + len]]); ink('#cdeeff', 1.5);
+  }
+  // porta
+  const dw = 38, dh = 62;
+  ctx.beginPath(); ctx.moveTo(cx - dw / 2, baseY); ctx.lineTo(cx - dw / 2, baseY - dh + 16);
+  ctx.quadraticCurveTo(cx - dw / 2, baseY - dh, cx, baseY - dh);
+  ctx.quadraticCurveTo(cx + dw / 2, baseY - dh, cx + dw / 2, baseY - dh + 16); ctx.lineTo(cx + dw / 2, baseY);
+  ctx.closePath(); ink('#7a4a25');
+  line(cx, baseY - dh + 6, cx, baseY - 3, 'rgba(60,35,15,.5)', 2);
+  ctx.fillStyle = '#ffd66b'; ell(cx + 10, baseY - 28, 3, 3); ctx.fill();
+  if (shop) {
+    windowBox(x0 + 12, baseY - 62, 40, 38); windowBox(x0 + w - 52, baseY - 62, 40, 38);
+    // toldo listrado
+    const ay = baseY - 78, aw = w + 12, ax = cx - aw / 2;
+    ctx.save(); roundRect(ax, ay, aw, 20, 6); ctx.clip();
+    for (let i = 0; i < 12; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e5484d'; ctx.fillRect(ax + i * aw / 11 - 8, ay, aw / 11 + 1, 20); }
+    ctx.restore(); roundRect(ax, ay, aw, 20, 6); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+    // placa
+    roundRect(cx - 46, top + 2, 92, 26, 7); ink('#fef3c7');
+    ctx.font = "bold 17px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = INK; ctx.fillText('LOJA', cx, top + 16); ctx.textBaseline = 'alphabetic';
+  } else {
+    windowBox(x0 + 14, top + 26, 36, 36); windowBox(x0 + w - 50, top + 26, 36, 36);
+    if (sign) {                                                  // plaquinha em cima da porta
+      roundRect(cx - 50, top + 3, 100, 22, 7); ink('#fef3c7', 2.5);
+      ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = INK; ctx.fillText(sign, cx, top + 15); ctx.textBaseline = 'alphabetic';
+    }
+  }
+  // neve acumulada no pe da casa
+  blob([[x0 - 22, baseY + 6], [x0 + w * 0.2, baseY - 9], [cx - 26, baseY + 3], [cx - 24, baseY + 12], [x0 - 10, baseY + 14]]);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  blob([[x0 + w + 22, baseY + 6], [x0 + w * 0.8, baseY - 9], [cx + 26, baseY + 3], [cx + 24, baseY + 12], [x0 + w + 10, baseY + 14]]);
+  ctx.fillStyle = '#fff'; ctx.fill();
+}
+function lampPost(x, baseY) {
+  ctx.fillStyle = 'rgba(255,225,120,.28)'; ell(x, baseY - 96, 34, 34); ctx.fill();
+  ctx.beginPath(); ctx.rect(x - 4, baseY - 86, 8, 86); ink('#3b4a5e', 2.5);
+  roundRect(x - 9, baseY - 6, 18, 9, 3); ink('#3b4a5e', 2.5);
+  roundRect(x - 11, baseY - 108, 22, 24, 5); ink('#ffe07a', 2.5);
+  poly([[x - 15, baseY - 106], [x, baseY - 120], [x + 15, baseY - 106]]); ink('#3b4a5e', 2.5);
+  ctx.fillStyle = '#fff'; ell(x, baseY - 116, 9, 3.5); ctx.fill();
+}
+function snowman(x, y) {
+  ctx.fillStyle = 'rgba(120,170,215,.35)'; ell(x, y + 4, 34, 8); ctx.fill();
+  line(x - 18, y - 48, x - 44, y - 62, '#7a4a25', 4); line(x + 18, y - 48, x + 44, y - 64, '#7a4a25', 4);
+  ell(x, y - 20, 28, 25); ink('#fff'); ell(x, y - 56, 21, 19); ink('#fff'); ell(x, y - 86, 15, 14); ink('#fff');
+  roundRect(x - 17, y - 76, 34, 8, 4); ink('#38bdf8', 2); roundRect(x + 6, y - 74, 8, 20, 3); ink('#38bdf8', 2);
+  ctx.fillStyle = INK; ell(x - 5, y - 90, 2, 2); ctx.fill(); ell(x + 5, y - 90, 2, 2); ctx.fill();
+  for (const dy of [-62, -52, -42]) { ell(x, y + dy, 2, 2); ctx.fill(); }
+  poly([[x, y - 86], [x + 15, y - 83], [x, y - 81]]); ink('#f97316', 1.5);
+  roundRect(x - 13, y - 112, 26, 16, 3); ink('#374151', 2.5); roundRect(x - 18, y - 99, 36, 6, 3); ink('#374151', 2.5);
+}
+
+function paintVila() {
+  ctx.fillStyle = vgrad(0, 250, '#6fc3f7', '#d9f1ff'); ctx.fillRect(0, 0, W, H);
+  cloud(150, 96, 1); cloud(770, 120, 0.85); cloud(610, 66, 0.6);
+  peak(90, 250, 260, 120, '#8fb7d9'); peak(300, 250, 300, 150, '#9cc2e2'); peak(610, 250, 340, 165, '#8fb7d9');
+  peak(830, 250, 260, 125, '#9cc2e2'); peak(460, 250, 220, 95, '#a9cdea');
+  snowGround(236, 11);
+  // pracinha de pedra + caminho ate a loja
+  poly([[428, 300], [472, 300], [500, 360], [400, 360]]); ink('#b8c6d6');
+  ell(450, 418, 235, 82); ink('#b8c6d6');
+  ctx.save(); ell(450, 418, 233, 80); ctx.clip();
+  const r = seeded(7);
+  for (let i = 0; i < 120; i++) {
+    const x = 215 + r() * 470, y = 336 + r() * 164;
+    ctx.fillStyle = ['#cdd8e4', '#a9b9cb', '#dfe8f1'][i % 3];
+    ell(x, y, 9 + r() * 8, 5 + r() * 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(23,50,77,.28)'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  ctx.restore();
+  ell(450, 418, 235, 82); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  pine(40, 300, 1.0); pine(862, 302, 1.05);
+  house(165, 300, 168, 104, '#ef6b6b', 'rgba(150,40,40,.35)', '#8a4b3a', false, 'TAVERNA');
+  house(735, 300, 168, 104, '#6b8cef', 'rgba(40,60,150,.35)', '#8a4b3a', false);
+  house(450, 300, 190, 112, '#f0b34a', 'rgba(150,95,20,.35)', '#8a4b3a', true);
+  lampPost(300, 322); lampPost(600, 322);
+  pine(48, 520, 1.25); snowman(812, 478);
+  // montinhos de neve na frente
+  blob([[150, 548], [190, 500], [270, 512], [330, 548]]); ink('#fff');
+  blob([[560, 548], [610, 508], [690, 520], [730, 548]]); ink('#fff');
+  hangSign('Praça da Vila');
+}
+
+// ----- pecas do Porto -----
+function iceberg(x, y, s) {
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ell(x, y + 3, 44 * s, 6 * s); ctx.fill();
+  poly([[x - 40 * s, y], [x - 22 * s, y - 34 * s], [x - 4 * s, y - 22 * s], [x + 12 * s, y - 50 * s], [x + 38 * s, y]]); ink('#f4fbff', 2.5);
+  ctx.fillStyle = '#bfe0f5'; poly([[x + 12 * s, y - 47 * s], [x + 35 * s, y - 2], [x + 10 * s, y - 2]]); ctx.fill();
+}
+function crate(x, y, s) {
+  ctx.beginPath(); ctx.rect(x, y - s, s, s); ink('#c58a4a', 2.5);
+  line(x + 4, y - s + 4, x + s - 4, y - 4, '#8a5a32', 3); line(x + s - 4, y - s + 4, x + 4, y - 4, '#8a5a32', 3);
+  ctx.beginPath(); ctx.rect(x, y - s, s, s); ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = '#fff'; ell(x + s / 2, y - s, s / 2 - 2, 4); ctx.fill();
+}
+function barrel(x, y) {
+  roundRect(x - 15, y - 40, 30, 40, 8); ink('#a86b3a', 2.5);
+  line(x - 14, y - 29, x + 14, y - 29, '#5b6b7d', 3); line(x - 14, y - 11, x + 14, y - 11, '#5b6b7d', 3);
+  ctx.fillStyle = '#fff'; ell(x, y - 40, 13, 4); ctx.fill();
+}
+function lighthouse(x, baseY) {
+  ctx.fillStyle = 'rgba(255,236,150,.3)';
+  poly([[x + 8, baseY - 172], [x + 300, baseY - 232], [x + 300, baseY - 120]]); ctx.fill();   // facho de luz
+  const body = [[x - 34, baseY], [x - 22, baseY - 150], [x + 22, baseY - 150], [x + 34, baseY]];
+  ctx.save(); poly(body); ctx.clip();
+  for (let i = 0; i < 5; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#e5484d'; ctx.fillRect(x - 40, baseY - 30 * (i + 1), 80, 30); }
+  ctx.fillStyle = 'rgba(23,50,77,.12)'; ctx.fillRect(x + 6, baseY - 150, 40, 150);
+  ctx.restore(); poly(body); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.lineJoin = 'round'; ctx.stroke();
+  roundRect(x - 30, baseY - 158, 60, 10, 4); ink('#3b4a5e', 2.5);
+  ctx.beginPath(); ctx.rect(x - 17, baseY - 186, 34, 28); ink('#ffe07a', 2.5);
+  line(x, baseY - 185, x, baseY - 159, INK, 2.5);
+  poly([[x - 24, baseY - 186], [x, baseY - 212], [x + 24, baseY - 186]]); ink('#e5484d');
+  ctx.fillStyle = '#fff'; ell(x, baseY - 203, 9, 4); ctx.fill();
+  roundRect(x - 10, baseY - 30, 20, 30, 8); ink('#7a4a25', 2.5);
+  ctx.beginPath(); ctx.rect(x - 7, baseY - 96, 14, 16); ink('#bfe6ff', 2.5);
+  ctx.fillStyle = '#fff'; ell(x, baseY + 3, 46, 9); ctx.fill();
+}
+function hut(cx, baseY) {
+  const w = 150, h = 86, x0 = cx - w / 2, top = baseY - h;
+  ctx.beginPath(); ctx.rect(x0, top, w, h); ink('#4f9fd6');
+  for (let x = x0 + 18; x < x0 + w - 4; x += 18) line(x, top + 4, x, baseY - 3, 'rgba(20,70,120,.35)', 2);
+  poly([[x0 - 16, top + 8], [cx, top - 52], [x0 + w + 16, top + 8]]); ink('#8a4b3a');
+  roofSnow(cx, top + 8, w / 2 + 20, 64);
+  roundRect(cx - 54, baseY - 60, 34, 60, 6); ink('#7a4a25', 2.5);
+  windowBox(cx + 6, top + 26, 44, 34);
+  // plaquinha com um peixe
+  roundRect(cx - 34, top - 14, 68, 26, 7); ink('#fef3c7', 2.5);
+  ell(cx - 5, top - 1, 14, 6.5); ink('#38bdf8', 2); poly([[cx + 8, top - 1], [cx + 19, top - 8], [cx + 19, top + 6]]); ink('#38bdf8', 2);
+  ctx.fillStyle = INK; ell(cx - 11, top - 2.5, 1.5, 1.5); ctx.fill();
+  ctx.fillStyle = '#fff'; ell(cx, baseY + 4, 96, 9); ctx.fill();
+}
+function boat(x, y) {
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; ell(x, y + 50, 96, 9); ctx.fill();
+  ctx.beginPath(); ctx.rect(x - 4, y - 104, 8, 106); ink('#c9a26a', 2.5);                     // mastro
+  poly([[x + 8, y - 100], [x + 66, y - 22], [x + 8, y - 22]]); ink('#ffffff');                // vela
+  ctx.fillStyle = '#38bdf8'; poly([[x + 8, y - 52], [x + 44, y - 52], [x + 53, y - 40], [x + 8, y - 40]]); ctx.fill();
+  poly([[x + 8, y - 100], [x + 66, y - 22], [x + 8, y - 22]]); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  poly([[x - 6, y - 96], [x - 44, y - 30], [x - 6, y - 30]]); ink('#fef3c7');                 // vela menor
+  poly([[x - 4, y - 104], [x - 4, y - 116], [x + 18, y - 110]]); ink('#e5484d', 2);           // bandeirinha
+  poly([[x - 86, y - 6], [x + 92, y - 6], [x + 66, y + 44], [x - 62, y + 44]]); ink('#d9463a'); // casco
+  ctx.save(); poly([[x - 86, y - 6], [x + 92, y - 6], [x + 66, y + 44], [x - 62, y + 44]]); ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(x - 90, y + 6, 190, 8);
+  ctx.fillStyle = 'rgba(23,50,77,.18)'; ctx.fillRect(x - 90, y + 30, 190, 20);
+  ctx.restore();
+  poly([[x - 86, y - 6], [x + 92, y - 6], [x + 66, y + 44], [x - 62, y + 44]]); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  roundRect(x - 92, y - 13, 190, 10, 5); ink('#8a5a32', 2.5);
+  for (const dx of [-40, -8, 24]) { ell(x + dx, y + 24, 6, 6); ink('#bfe6ff', 2); }
+}
+function waveMarks(list, col) {
+  ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  for (const [x, y, w] of list) {
+    ctx.beginPath(); ctx.moveTo(x - w, y); ctx.quadraticCurveTo(x - w / 2, y - 6, x, y);
+    ctx.quadraticCurveTo(x + w / 2, y + 6, x + w, y); ctx.stroke();
+  }
+}
+
+function paintPorto() {
+  ctx.fillStyle = vgrad(0, 200, '#6fc3f7', '#d9f1ff'); ctx.fillRect(0, 0, W, H);
+  cloud(250, 104, 0.9); cloud(700, 84, 1); cloud(520, 134, 0.55);
+  // mar ao fundo, com icebergs
+  ctx.beginPath(); ctx.rect(-10, 178, 920, 90); ink(vgrad(178, 260, '#5bb0e6', '#2f86c9'), 2.5);
+  waveMarks([[230, 200, 12], [330, 222, 14], [520, 196, 12], [640, 226, 14], [820, 204, 12], [430, 236, 10]], 'rgba(255,255,255,.6)');
+  iceberg(410, 232, 0.9); iceberg(600, 214, 0.6); iceberg(860, 236, 0.75);
+  snowGround(246, 23);
+  // mar na frente (beirada de gelo ondulada)
+  const shore = [[-20, 446], [90, 428], [200, 450], [330, 432], [470, 436], [600, 418], [720, 440], [830, 420], [920, 436], [920, 560], [-20, 560]];
+  ctx.lineJoin = 'round'; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 16; blob(shore); ctx.stroke();
+  blob(shore); ink(vgrad(420, H, '#49a5e0', '#1f6fb5'));
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 3; blob(shore.map(([x, y]) => [x, y + 9])); ctx.stroke();
+  waveMarks([[70, 486, 14], [180, 516, 14], [250, 476, 12], [540, 474, 12], [800, 470, 14], [860, 512, 12], [520, 524, 12]], 'rgba(255,255,255,.6)');
+  for (const [x, y, rx] of [[120, 505, 34], [846, 492, 28], [228, 528, 22]]) {      // placas de gelo
+    ell(x, y + 4, rx, rx * 0.3); ctx.fillStyle = '#9fd0ee'; ctx.fill();
+    ell(x, y, rx, rx * 0.3); ink('#f4fbff', 2.5);
+  }
+  // construcoes
+  lighthouse(120, 300); hut(745, 300);
+  crate(590, 322, 34); crate(628, 322, 28); crate(600, 290, 26); barrel(862, 336); barrel(40, 392);
+  pine(250, 296, 0.8); pine(878, 290, 0.7);
+  // pier de madeira
+  for (const px of [338, 462]) for (const py of [470, 530]) { ctx.beginPath(); ctx.rect(px - 7, py, 14, 30); ink('#6b4a2b', 2.5); }
+  ctx.beginPath(); ctx.rect(330, 392, 140, 150); ink('#c58a4a');
+  for (let y = 410; y < 540; y += 18) line(332, y, 468, y, '#8a5a32', 2.5);
+  const r = seeded(5);
+  for (let y = 401; y < 540; y += 18) { ctx.fillStyle = '#6b4a2b'; ell(340, y, 1.8, 1.8); ctx.fill(); ell(460, y, 1.8, 1.8); ctx.fill();
+    line(360 + r() * 70, y - 4, 380 + r() * 70, y - 4, 'rgba(138,90,50,.5)', 1.5); }
+  for (const [px, py] of [[330, 398], [470, 398], [330, 468], [470, 468]]) {       // estacas
+    roundRect(px - 9, py - 30, 18, 36, 5); ink('#8a5a32', 2.5);
+    ctx.fillStyle = '#fff'; ell(px, py - 30, 9, 4.5); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+  }
+  ctx.strokeStyle = '#e9d8a6'; ctx.lineWidth = 4;                                  // cordas
+  ctx.beginPath(); ctx.moveTo(330, 414); ctx.quadraticCurveTo(326, 452, 330, 448);
+  ctx.moveTo(470, 414); ctx.quadraticCurveTo(476, 452, 470, 448); ctx.stroke();
+  ell(470, 452, 11, 11); ink('#e5484d', 2.5); ctx.fillStyle = '#fff'; ell(470, 452, 5, 5); ctx.fill();   // boia
+  ell(470, 452, 5, 5); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke();
+  // placa de madeira
+  ctx.beginPath(); ctx.rect(562, 352, 8, 54); ink('#8a5a32', 2.5);
+  poly([[512, 344], [606, 344], [626, 361], [606, 378], [512, 378]]); ink('#e0a763', 2.5);
+  ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK; ctx.fillText('Ilha Secreta', 564, 362); ctx.textBaseline = 'alphabetic';
+  boat(668, 474);
+  line(578, 470, 480, 446, '#e9d8a6', 3);                                          // amarra do barco
+  ctx.font = "bold 13px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center';
+  ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(23,50,77,.85)'; ctx.lineWidth = 4;
+  const hint = 'Clique no botão "Ilha Secreta" para zarpar!';
+  ctx.strokeText(hint, 668, 534); ctx.fillStyle = '#fff'; ctx.fillText(hint, 668, 534);
+  hangSign('Porto dos Barcos');
+}
+
+// ----- pecas da Ilha -----
+function palm(x, baseY, lean, s) {
+  const tx = x + lean * s, ty = baseY - 150 * s;
+  const trunk = (col, lw) => { ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, baseY); ctx.quadraticCurveTo(x + lean * 0.15 * s, baseY - 90 * s, tx, ty); ctx.stroke(); };
+  trunk(INK, 20 * s); trunk('#b07a44', 14 * s);
+  for (let i = 1; i < 8; i++) {                                 // aneis do tronco
+    const t = i / 8, px = (1 - t) * (1 - t) * x + 2 * (1 - t) * t * (x + lean * 0.15 * s) + t * t * tx;
+    const py = (1 - t) * (1 - t) * baseY + 2 * (1 - t) * t * (baseY - 90 * s) + t * t * ty;
+    line(px - 6 * s, py + 1, px + 6 * s, py - 2, 'rgba(90,55,25,.6)', 2);
+  }
+  const leaves = [[-92, -6, -50, -44], [-70, 44, -44, -8], [92, -6, 50, -44], [70, 44, 44, -8], [-40, -66, -30, -40], [42, -66, 30, -40]];
+  for (const [ex, ey, cx, cy] of leaves) {
+    const len = Math.hypot(ex, ey), nx = -ey / len * 15, ny = ex / len * 15;   // largura da folha
+    ctx.beginPath(); ctx.moveTo(tx, ty);
+    ctx.quadraticCurveTo(tx + (cx + nx) * s, ty + (cy + ny) * s, tx + ex * s, ty + ey * s);
+    ctx.quadraticCurveTo(tx + (cx - nx) * s, ty + (cy - ny) * s, tx, ty);
+    ctx.closePath(); ink(ey > 20 ? '#27925a' : '#3fb86d', 2.5);
+  }
+  for (const [dx, dy] of [[-8, 6], [8, 8], [0, 14]]) { ell(tx + dx * s, ty + dy * s, 7 * s, 7 * s); ink('#7a4a25', 2); }
+}
+function rock(x, y, s) {
+  blob([[x - 30 * s, y], [x - 26 * s, y - 24 * s], [x, y - 36 * s], [x + 28 * s, y - 22 * s], [x + 32 * s, y]]); ink('#9aa7b5');
+  ctx.fillStyle = '#c3ccd6'; blob([[x - 16 * s, y - 18 * s], [x - 2 * s, y - 30 * s], [x + 8 * s, y - 20 * s], [x - 6 * s, y - 14 * s]]); ctx.fill();
+}
+function starfish(x, y, r, rot) {
+  const pts = [];
+  for (let i = 0; i < 10; i++) { const a = rot + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; pts.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr * 0.8]); }
+  poly(pts); ink('#fb923c', 2);
+}
+function chest(x, y) {
+  ctx.fillStyle = 'rgba(160,120,40,.3)'; ell(x, y + 3, 44, 8); ctx.fill();
+  ctx.beginPath(); ctx.rect(x - 34, y - 30, 68, 30); ink('#9a5b2c');
+  ctx.beginPath(); ctx.moveTo(x - 34, y - 30); ctx.quadraticCurveTo(x - 34, y - 58, x, y - 58);
+  ctx.quadraticCurveTo(x + 34, y - 58, x + 34, y - 30); ctx.closePath(); ink('#b06a34');
+  for (const dx of [-22, 22]) { ctx.beginPath(); ctx.rect(x + dx - 4, y - 56, 8, 56); ctx.fillStyle = '#fbbf24'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke(); }
+  line(x - 34, y - 30, x + 34, y - 30, INK, 3);
+  roundRect(x - 7, y - 36, 14, 14, 3); ink('#fbbf24', 2); ctx.fillStyle = INK; ell(x, y - 29, 2, 2.6); ctx.fill();
+  for (const [dx, dy] of [[-48, 2], [-40, -6], [46, 4]]) { ell(x + dx, y + dy, 6, 3.5); ink('#fde047', 1.5); }
+}
+function rowboat(x, y) {
+  ctx.fillStyle = 'rgba(160,120,40,.28)'; ell(x, y + 16, 70, 9); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x - 68, y - 12); ctx.quadraticCurveTo(x, y - 2, x + 68, y - 12);
+  ctx.quadraticCurveTo(x + 50, y + 22, x, y + 22); ctx.quadraticCurveTo(x - 50, y + 22, x - 68, y - 12); ctx.closePath(); ink('#3aa0d8');
+  ctx.beginPath(); ctx.moveTo(x - 60, y - 9); ctx.quadraticCurveTo(x, y + 2, x + 60, y - 9);
+  ctx.quadraticCurveTo(x, y + 12, x - 60, y - 9); ctx.closePath(); ink('#8a5a32', 2.5);
+  line(x - 22, y + 3, x + 22, y + 3, '#e0a763', 5);
+  // remo: cabo + pa alinhada com o cabo (formato de remo, nao de pedra)
+  line(x + 30, y - 4, x + 80, y - 32, INK, 8); line(x + 30, y - 4, x + 80, y - 32, '#c9a26a', 4.5);
+  ctx.save(); ctx.translate(x + 80, y - 32); ctx.rotate(Math.atan2(-28, 50));
+  ctx.beginPath(); ctx.moveTo(-2, -3); ctx.lineTo(8, -8); ctx.lineTo(30, -8);
+  ctx.quadraticCurveTo(36, 0, 30, 8); ctx.lineTo(8, 8); ctx.lineTo(-2, 3); ctx.closePath(); ink('#e0a763', 2.5);
+  line(8, 0, 30, 0, 'rgba(138,90,50,.6)', 1.5);
+  ctx.restore();
+}
+
+function paintIlha() {
+  ctx.fillStyle = vgrad(0, 200, '#5fc6f5', '#d6f4ff'); ctx.fillRect(0, 0, W, H);
+  // sol
+  ctx.strokeStyle = '#fde047'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+  for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; ctx.beginPath();
+    ctx.moveTo(112 + Math.cos(a) * 52, 92 + Math.sin(a) * 52); ctx.lineTo(112 + Math.cos(a) * 66, 92 + Math.sin(a) * 66); ctx.stroke(); }
+  ell(112, 92, 42, 42); ink('#fde047');
+  cloud(360, 118, 0.8); cloud(760, 92, 1); cloud(590, 140, 0.5);
+  // mar
+  ctx.beginPath(); ctx.rect(-10, 184, 920, 370); ink(vgrad(184, H, '#4fd0df', '#1f8fc7'), 2.5);
+  waveMarks([[60, 214, 14], [210, 204, 12], [470, 202, 12], [640, 210, 12], [850, 208, 14], [34, 300, 12], [870, 272, 12], [40, 520, 12], [880, 500, 12], [330, 216, 10]], 'rgba(255,255,255,.65)');
+  // ilha de areia
+  const isle = [[70, 420], [110, 300], [280, 244], [520, 232], [730, 256], [848, 340], [856, 450], [770, 540], [520, 566], [260, 566], [120, 520]];
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 26; blob(isle); ctx.stroke();       // espuma
+  ctx.strokeStyle = '#e3c06c'; ctx.lineWidth = 12; blob(isle); ctx.stroke();                     // areia molhada
+  blob(isle); ink('#f6dd95');
+  const c = [460, 400];
+  ctx.fillStyle = '#fbe9b0'; blob(isle.map(([x, y]) => [c[0] + (x - c[0]) * 0.84, c[1] + (y - c[1]) * 0.8])); ctx.fill();
+  ctx.save(); blob(isle); ctx.clip();
+  const r = seeded(31);
+  for (let i = 0; i < 330; i++) {                               // graos de areia
+    const x = 70 + r() * 790, y = 236 + r() * 310;
+    ctx.fillStyle = r() < 0.6 ? 'rgba(201,160,75,.55)' : 'rgba(255,255,255,.7)';
+    ell(x, y, 1 + r() * 1.5, 1 + r() * 1.2); ctx.fill();
+  }
+  for (let i = 0; i < 12; i++) {                                // ondinhas na areia
+    const x = 120 + r() * 680, y = 280 + r() * 240, w = 26 + r() * 40;
+    ctx.strokeStyle = 'rgba(201,160,75,.5)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x, y - 6, x + w / 2, y); ctx.stroke();
+  }
+  ctx.restore();
+  rock(750, 320, 0.85); rock(790, 344, 0.6);   // as duas dentro da areia
+  palm(215, 316, -34, 1); palm(640, 292, 40, 0.85);
+  chest(700, 372);
+  // X do tesouro
+  line(436, 452, 464, 474, '#e5484d', 7); line(464, 452, 436, 474, '#e5484d', 7);
+  starfish(300, 480, 15, 0.3); starfish(588, 500, 11, 1.1);
+  for (const [x, y] of [[360, 330], [540, 430], [250, 400]]) {  // conchinhas
+    ell(x, y, 8, 6, Math.PI, Math.PI * 2); ink('#fbcfe8', 2);
+    line(x - 4, y - 1, x - 2, y - 5, INK, 1.2); line(x, y - 1, x, y - 6, INK, 1.2); line(x + 4, y - 1, x + 2, y - 5, INK, 1.2);
+  }
+  rowboat(168, 462);
+  hangSign('Ilha Secreta');
+}
+
+// ----- Taverna (interior da casinha vermelha da Praca) -----
+function tavBarrel(x, y, s) {
+  ctx.fillStyle = 'rgba(60,30,10,.25)'; ell(x, y + 2, 20 * s, 5 * s); ctx.fill();
+  roundRect(x - 17 * s, y - 46 * s, 34 * s, 46 * s, 9 * s); ink('#a86b3a', 2.5);
+  line(x - 16 * s, y - 33 * s, x + 16 * s, y - 33 * s, '#5b6b7d', 3.5); line(x - 16 * s, y - 12 * s, x + 16 * s, y - 12 * s, '#5b6b7d', 3.5);
+  line(x - 6 * s, y - 44 * s, x - 6 * s, y - 2 * s, 'rgba(60,30,10,.35)', 1.5); line(x + 6 * s, y - 44 * s, x + 6 * s, y - 2 * s, 'rgba(60,30,10,.35)', 1.5);
+  ell(x, y - 46 * s, 15 * s, 4.5 * s); ink('#c58a4a', 2);
+}
+function mug(x, y, s, drink) {
+  ctx.strokeStyle = INK; ctx.lineWidth = 5 * s; ctx.beginPath(); ctx.arc(x + 8 * s, y - 8 * s, 5 * s, -1.2, 1.2); ctx.stroke();   // alca
+  ctx.strokeStyle = '#f4ead8'; ctx.lineWidth = 2.4 * s; ctx.beginPath(); ctx.arc(x + 8 * s, y - 8 * s, 5 * s, -1.2, 1.2); ctx.stroke();
+  roundRect(x - 8 * s, y - 16 * s, 16 * s, 16 * s, 3 * s); ink('#f4ead8', 2);
+  ell(x, y - 16 * s, 8 * s, 3 * s); ink(drink, 1.5);
+  ctx.fillStyle = '#fff'; ell(x - 2.5 * s, y - 16.5 * s, 2.2 * s, 1.4 * s); ctx.fill(); ell(x + 2.5 * s, y - 15.8 * s, 2 * s, 1.3 * s); ctx.fill();   // marshmallows
+}
+function stool(x, y) {
+  line(x - 12, y + 2, x - 15, y + 34, INK, 6); line(x + 12, y + 2, x + 15, y + 34, INK, 6);
+  line(x - 12, y + 2, x - 15, y + 34, '#8a5a32', 3); line(x + 12, y + 2, x + 15, y + 34, '#8a5a32', 3);
+  line(x - 13, y + 22, x + 13, y + 22, '#8a5a32', 3);
+  ell(x, y + 4, 21, 8); ink('#8a5a32', 2.5); ell(x, y, 21, 8); ink('#d9463a', 2.5);
+}
+function roundTable(x, y) {
+  ctx.fillStyle = 'rgba(60,30,10,.22)'; ell(x, y + 48, 54, 12); ctx.fill();
+  ctx.beginPath(); ctx.rect(x - 8, y + 6, 16, 40); ink('#8a5a32', 2.5);
+  roundRect(x - 26, y + 42, 52, 9, 4); ink('#8a5a32', 2.5);
+  ell(x, y + 8, 60, 22); ink('#9a5b2c'); ell(x, y, 60, 22); ink('#d9a05b');
+  ctx.strokeStyle = 'rgba(110,65,25,.45)'; ctx.lineWidth = 2; ell(x, y, 48, 16); ctx.stroke();
+}
+function jar(x, y, w, h, col) {
+  roundRect(x - w / 2, y - h, w, h, 3); ink(col, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(x - w / 2 + 2.5, y - h + 4, 2.5, h - 8);
+  roundRect(x - w / 2 - 1, y - h - 4, w + 2, 5, 2); ink('#8a5a32', 1.5);
+}
+
+function paintTaverna() {
+  const WALL_Y = 252;
+  // parede de tabuas
+  ctx.fillStyle = vgrad(0, WALL_Y, '#b9793f', '#96592e'); ctx.fillRect(0, 0, W, WALL_Y);
+  const r = seeded(77);
+  for (let x = 0; x <= W; x += 56) line(x, 26, x, WALL_Y, 'rgba(60,30,10,.33)', 2);
+  for (let i = 0; i < 26; i++) { ctx.fillStyle = 'rgba(60,30,10,.22)'; ell(r() * W, 40 + r() * 150, 3 + r() * 3, 1.6 + r() * 1.4); ctx.fill(); }
+  ctx.fillStyle = 'rgba(70,35,12,.28)'; ctx.fillRect(0, 204, W, WALL_Y - 204);       // lambri
+  line(0, 204, W, 204, 'rgba(60,30,10,.55)', 3);
+  // chao de tabuas
+  ctx.fillStyle = vgrad(WALL_Y, H, '#e3ab66', '#c4874a'); ctx.fillRect(0, WALL_Y, W, H - WALL_Y);
+  for (let y = WALL_Y + 36, k = 0; y < H; y += 36, k++) {
+    line(0, y, W, y, 'rgba(110,65,25,.5)', 2);
+    for (let x = (k % 2 ? 70 : 190); x < W; x += 240) line(x, y - 36, x, y, 'rgba(110,65,25,.4)', 2);
+  }
+  for (let i = 0; i < 60; i++) { ctx.fillStyle = 'rgba(110,65,25,.28)'; ell(r() * W, WALL_Y + 8 + r() * (H - WALL_Y - 12), 5 + r() * 9, 1 + r()); ctx.fill(); }
+  line(0, WALL_Y, W, WALL_Y, INK, 3);
+  // viga do teto + bandeirinhas
+  ctx.beginPath(); ctx.rect(-6, -6, W + 12, 32); ink('#6b3f1f');
+  const flags = ['#e5484d', '#fbbf24', '#38bdf8', '#34d399', '#c084fc'];
+  for (let i = 0, x = 14; x < W - 20; x += 34, i++) {
+    if (x > 330 && x < 548) continue;                           // espaco da placa
+    poly([[x, 27], [x + 26, 27], [x + 13, 50]]); ink(flags[i % flags.length], 2);
+  }
+
+  // ----- lareira de pedra -----
+  const fx = 150;
+  ctx.beginPath(); ctx.rect(fx - 58, 26, 116, 60); ink('#98a3b0');                    // chamine
+  roundRect(fx - 88, 92, 176, 162, 10); ink('#aab4c0');
+  ctx.save(); roundRect(fx - 88, 92, 176, 162, 10); ctx.clip();
+  for (let i = 0; i < 46; i++) {
+    const sx = fx - 96 + r() * 180, sy = 90 + r() * 166;
+    roundRect(sx, sy, 20 + r() * 20, 12 + r() * 8, 5); ctx.fillStyle = ['#c3ccd6', '#939eab', '#b4bec9'][i % 3]; ctx.fill();
+    ctx.strokeStyle = 'rgba(23,50,77,.3)'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  ctx.restore();
+  roundRect(fx - 88, 92, 176, 162, 10); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  for (const [sx, sy] of [[-44, 36], [8, 34], [-20, 58], [26, 60]]) { roundRect(fx + sx, sy, 28, 14, 5); ctx.fillStyle = '#b4bec9'; ctx.fill(); ctx.strokeStyle = 'rgba(23,50,77,.3)'; ctx.lineWidth = 1.5; ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(fx - 50, 254); ctx.lineTo(fx - 50, 186); ctx.quadraticCurveTo(fx - 50, 142, fx, 142);   // boca
+  ctx.quadraticCurveTo(fx + 50, 142, fx + 50, 186); ctx.lineTo(fx + 50, 254); ctx.closePath(); ink('#2b1d14');
+  roundRect(fx - 36, 232, 60, 13, 6); ink('#8a5a32', 2.5); roundRect(fx - 22, 224, 60, 13, 6); ink('#a86b3a', 2.5);   // lenha
+  roundRect(fx - 100, 80, 200, 17, 6); ink('#8a5a32');                                // prateleira da lareira
+  ctx.beginPath(); ctx.rect(fx - 78, 58, 9, 22); ink('#fef3c7', 2); ell(fx - 73.5, 52, 4, 6.5); ink('#fbbf24', 1.5);   // vela
+  ell(fx + 58, 64, 15, 15); ink('#cdeeff', 2.5); roundRect(fx + 43, 73, 30, 8, 3); ink('#8a5a32', 2);                  // globo de neve
+  ctx.fillStyle = '#fff'; ell(fx + 58, 71, 9, 4); ctx.fill(); poly([[fx + 53, 70], [fx + 58, 58], [fx + 63, 70]]); ink('#2f9e6b', 1.5);
+  roundRect(fx - 26, 44, 52, 36, 4); ink('#fef3c7', 2.5);                             // quadro: montanha
+  poly([[fx - 20, 76], [fx - 4, 54], [fx + 6, 66], [fx + 12, 60], [fx + 22, 76]]); ink('#8fb7d9', 1.5);
+  roundRect(fx - 104, 246, 208, 16, 5); ink('#8d98a6');                               // base de pedra
+  for (const [lx, ly] of [[262, 244], [284, 244], [273, 226]]) {                      // pilha de lenha
+    ell(lx, ly, 12, 11); ink('#a86b3a', 2.5); ctx.strokeStyle = 'rgba(60,30,10,.5)'; ctx.lineWidth = 1.5; ell(lx, ly, 6, 5.5); ctx.stroke();
+  }
+
+  // ----- prateleiras e balcao -----
+  roundRect(322, 78, 328, 124, 8); ink('#7a4a25');
+  for (const sy of [128, 180]) { ctx.beginPath(); ctx.rect(316, sy, 340, 9); ink('#c58a4a', 2.5); }
+  const cols = ['#fbbf24', '#ef4444', '#34d399', '#60a5fa', '#f472b6', '#c084fc'];
+  for (let i = 0; i < 9; i++) jar(346 + i * 35, 128, 16 + (i % 3) * 3, 22 + (i * 7) % 12, cols[i % cols.length]);
+  for (let i = 0; i < 6; i++) {
+    if (i % 2) mug(352 + i * 50, 180, 0.95, '#7a4a25'); else jar(352 + i * 50, 180, 20, 30, cols[(i + 3) % cols.length]);
+  }
+  roundRect(296, 238, 380, 76, 8); ink('#b06a34');                                    // frente do balcao
+  for (let x = 334; x < 660; x += 44) line(x, 246, x, 308, 'rgba(60,30,10,.35)', 2);
+  roundRect(304, 300, 364, 10, 4); ink('#8a5a32', 2.5);
+  roundRect(284, 222, 404, 21, 8); ink('#e0a763');                                    // tampo
+  line(296, 233, 676, 233, 'rgba(110,65,25,.4)', 2);
+  mug(350, 226, 1.1, '#7a4a25'); mug(476, 226, 1.1, '#7a4a25');
+  ell(560, 222, 24, 7); ink('#fff', 2);                                               // prato de biscoitos
+  for (const [bx, by] of [[550, 219], [562, 216], [571, 220]]) { ell(bx, by, 7, 4); ink('#d9a05b', 1.5); }
+  roundRect(628, 204, 20, 20, 9); ink('#fbbf24', 2); ctx.fillStyle = INK; ell(638, 203, 3, 3); ctx.fill();   // sineta
+  for (const sx of [336, 436, 536, 636]) stool(sx, 338);
+
+  // ----- janela -----
+  roundRect(700, 84, 78, 100, 8); ink(vgrad(84, 184, '#9bd6ff', '#e6f6ff'));
+  ctx.save(); roundRect(700, 84, 78, 100, 8); ctx.clip();
+  ctx.fillStyle = '#fff'; ell(739, 190, 60, 26); ctx.fill();
+  poly([[712, 176], [726, 144], [740, 176]]); ctx.fillStyle = '#2f9e6b'; ctx.fill();
+  for (let i = 0; i < 14; i++) { ctx.fillStyle = '#fff'; ell(704 + r() * 70, 90 + r() * 70, 1.8, 1.8); ctx.fill(); }
+  ctx.restore();
+  roundRect(700, 84, 78, 100, 8); ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.stroke();
+  line(739, 86, 739, 182, INK, 3); line(702, 134, 776, 134, INK, 3);
+  poly([[694, 78], [722, 78], [700, 150], [694, 150]]); ink('#d9463a', 2.5); poly([[784, 78], [756, 78], [778, 150], [784, 150]]); ink('#d9463a', 2.5);   // cortinas
+  roundRect(690, 72, 98, 10, 4); ink('#8a5a32', 2.5); roundRect(692, 182, 94, 10, 4); ink('#8a5a32', 2.5);
+
+  // ----- porta de saida -----
+  ctx.beginPath(); ctx.moveTo(800, WALL_Y); ctx.lineTo(800, 150); ctx.quadraticCurveTo(800, 112, 838, 112);
+  ctx.quadraticCurveTo(876, 112, 876, 150); ctx.lineTo(876, WALL_Y); ctx.closePath(); ink('#7a4a25');
+  for (const dx of [819, 838, 857]) line(dx, 120, dx, 248, 'rgba(60,30,10,.4)', 2);
+  ell(838, 152, 13, 13); ink('#bfe6ff', 2.5); line(838, 140, 838, 164, INK, 2); line(826, 152, 850, 152, INK, 2);
+  ctx.fillStyle = '#ffd66b'; ell(864, 196, 4, 4); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = INK; ctx.stroke();
+  roundRect(808, 82, 60, 22, 6); ink('#fef3c7', 2.5);
+  ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK; ctx.fillText('SAÍDA', 838, 94); ctx.textBaseline = 'alphabetic';
+  roundRect(792, 258, 92, 24, 7); ink('#3f9f48', 2.5);                                 // capacho
+  ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; roundRect(798, 262, 80, 16, 5); ctx.stroke();
+
+  // ----- lampioes -----
+  for (const lx of [300, 672]) {
+    ctx.fillStyle = 'rgba(255,224,122,.2)'; ell(lx, 64, 46, 46); ctx.fill();
+    line(lx, 26, lx, 48, '#3b4a5e', 3);
+    poly([[lx - 12, 52], [lx, 42], [lx + 12, 52]]); ink('#3b4a5e', 2); roundRect(lx - 9, 52, 18, 22, 4); ink('#ffe07a', 2);
+    roundRect(lx - 11, 73, 22, 5, 2); ink('#3b4a5e', 2);
+  }
+
+  // ----- tapete, mesas, barris -----
+  // tapete menor e mais pra frente, no vao entre os banquinhos do balcao e os das mesas
+  ell(455, 446, 122, 40); ink('#b83b3b');
+  ctx.strokeStyle = '#f6d28b'; ctx.lineWidth = 4; ell(455, 446, 108, 32); ctx.stroke();
+  ctx.setLineDash([10, 9]); ctx.lineWidth = 3; ell(455, 446, 88, 23); ctx.stroke(); ctx.setLineDash([]);
+  poly([[455, 432], [478, 446], [455, 460], [432, 446]]); ink('#f6d28b', 2);
+  for (const [tx, ty] of [[205, 392], [705, 404]]) {
+    stool(tx - 88, ty + 6); stool(tx + 88, ty + 6);
+    roundTable(tx, ty);
+    mug(tx - 20, ty + 2, 1.05, '#7a4a25'); mug(tx + 22, ty - 4, 1.05, '#7a4a25');
+  }
+  tavBarrel(58, 508, 1.15); tavBarrel(104, 516, 1.15); tavBarrel(80, 462, 1.05);
+  tavBarrel(850, 516, 1.15);
+  hangSign('Taverna');
+}
+
+// Fogo da lareira (animado por cima do cenario)
+function drawFire() {
+  const t = performance.now() / 1000, fx = 150, fy = 236;
+  ctx.fillStyle = `rgba(255,170,60,${0.13 + 0.04 * Math.sin(t * 5)})`; ell(fx, 214, 92, 70); ctx.fill();
+  const flame = (dx, w, h, col, ph) => {
+    const k = 1 + 0.16 * Math.sin(t * 9 + ph), sway = 3 * Math.sin(t * 6 + ph * 2);
+    ctx.beginPath(); ctx.moveTo(fx + dx - w, fy);
+    ctx.quadraticCurveTo(fx + dx - w * 0.9, fy - h * 0.5 * k, fx + dx + sway, fy - h * k);
+    ctx.quadraticCurveTo(fx + dx + w * 0.9, fy - h * 0.5 * k, fx + dx + w, fy);
+    ctx.closePath(); ctx.fillStyle = col; ctx.fill();
+  };
+  flame(-14, 13, 44, '#f97316', 0); flame(12, 14, 52, '#f97316', 1.7); flame(0, 15, 62, '#fb923c', 3.1);
+  flame(-6, 8, 30, '#fde047', 4.2); flame(8, 8, 36, '#fde047', 5.5);
+}
+
+// ----- Loja (interior da casinha amarela da Praca) -----
+// Desenha um item da loja (as mesmas funcoes usadas no personagem) em qualquer lugar e tamanho.
+function showItem(id, x, y, s, dy) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(s, s); WEAR[id](0, dy); ctx.restore();
+}
+function mannequin(x, y, s, items) {
+  ctx.fillStyle = 'rgba(40,60,80,.2)'; ell(x, y + 6, 34 * s, 9 * s); ctx.fill();
+  ell(x, y + 2, 26 * s, 8 * s); ink('#8a5a32', 2.5); ell(x, y - 2, 26 * s, 8 * s); ink('#c58a4a', 2.5);   // base redonda
+  ctx.beginPath(); ctx.rect(x - 3 * s, y - 22 * s, 6 * s, 20 * s); ink('#64748b', 2);                      // haste
+  const cy = y - 44 * s;
+  ell(x, cy, 20 * s, 25 * s); ink('#dbe2ea', 2.5);                                                       // corpo de manequim
+  ctx.fillStyle = '#eef2f6'; ell(x, cy + 5 * s, 12 * s, 17 * s); ctx.fill();
+  for (const id of items) { ctx.save(); ctx.translate(x, cy); ctx.scale(s, s); WEAR[id](0, 0); ctx.restore(); }
+}
+function plant(x, y) {
+  for (const [dx, dy, rot] of [[-14, -40, -0.5], [0, -52, 0], [14, -40, 0.5], [-8, -30, -0.9], [8, -30, 0.9]]) {
+    ctx.save(); ctx.translate(x + dx, y + dy); ctx.rotate(rot); ell(0, 0, 8, 20); ink('#3fb86d', 2); ctx.restore();
+  }
+  poly([[x - 18, y - 26], [x + 18, y - 26], [x + 13, y], [x - 13, y]]); ink('#e08a5b', 2.5);
+  roundRect(x - 21, y - 31, 42, 9, 4); ink('#e08a5b', 2.5);
+}
+
+function paintLoja() {
+  const WALL_Y = 252;
+  // parede com papel listrado
+  ctx.fillStyle = '#fbeed8'; ctx.fillRect(0, 0, W, WALL_Y);
+  ctx.fillStyle = '#f4dcb6'; for (let x = 0; x < W; x += 44) ctx.fillRect(x, 26, 22, WALL_Y - 26);
+  ctx.fillStyle = '#5fb3a6'; ctx.fillRect(0, 206, W, WALL_Y - 206);                   // rodape alto
+  line(0, 206, W, 206, INK, 3);
+  for (let x = 30; x < W; x += 60) line(x, 212, x, WALL_Y - 4, 'rgba(23,50,77,.22)', 2);
+  // piso xadrez
+  ctx.fillStyle = '#fdf6ec'; ctx.fillRect(0, WALL_Y, W, H - WALL_Y);
+  ctx.fillStyle = '#cfe9e5';
+  for (let row = 0, y = WALL_Y; y < H; y += 48, row++) for (let col = 0, x = 0; x < W; x += 60, col++) if ((row + col) % 2) ctx.fillRect(x, y, 60, 48);
+  for (let y = WALL_Y; y < H; y += 48) line(0, y, W, y, 'rgba(23,50,77,.12)', 1.5);
+  for (let x = 0; x <= W; x += 60) line(x, WALL_Y, x, H, 'rgba(23,50,77,.12)', 1.5);
+  line(0, WALL_Y, W, WALL_Y, INK, 3);
+  // viga do teto
+  ctx.beginPath(); ctx.rect(-6, -6, W + 12, 32); ink('#5fb3a6');
+
+  // ----- estante de chapeus -----
+  roundRect(34, 62, 270, 176, 8); ink('#fff7e6');
+  for (const sy of [138, 222]) { ctx.beginPath(); ctx.rect(28, sy, 282, 10); ink('#c58a4a', 2.5); }
+  roundRect(96, 44, 146, 24, 7); ink('#fef3c7', 2.5);
+  ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK; ctx.fillText('CHAPÉUS', 169, 57);
+  showItem('bone', 82, 132, 1.7, 19); showItem('cartola', 170, 134, 1.7, 19); showItem('coroa', 256, 134, 1.7, 19);
+  showItem('gorro', 82, 220, 1.7, 19); showItem('capacete', 170, 218, 1.7, 19); showItem('festa', 256, 220, 1.5, 19);
+
+  // ----- caixa (balcao) -----
+  roundRect(398, 86, 124, 28, 8); ink('#fef3c7', 2.5);
+  ctx.fillStyle = INK; ctx.font = "bold 16px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.fillText('CAIXA', 460, 101);
+  line(420, 26, 420, 86, '#6b4a2b', 3); line(500, 26, 500, 86, '#6b4a2b', 3);
+  roundRect(346, 238, 232, 78, 8); ink('#5fb3a6');                                    // frente do balcao
+  roundRect(366, 256, 192, 40, 8); ink('#fef3c7', 2.5);
+  ctx.fillStyle = INK; ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.fillText('Clique para comprar', 462, 277);
+  roundRect(334, 222, 256, 21, 8); ink('#fff7e6');                                    // tampo
+  roundRect(470, 176, 84, 48, 6); ink('#64748b');                                     // caixa registradora
+  roundRect(478, 158, 54, 24, 5); ink('#475569', 2.5); roundRect(484, 163, 42, 13, 3); ink('#86efac', 2);
+  for (let i = 0; i < 8; i++) { roundRect(478 + (i % 4) * 14, 188 + Math.floor(i / 4) * 12, 10, 8, 2); ctx.fillStyle = '#e2e8f0'; ctx.fill(); }
+  roundRect(538, 190, 10, 20, 2); ink('#fbbf24', 1.5);
+  ctx.beginPath(); ctx.rect(352, 170, 96, 52); ink('#fff', 2.5);                      // mostruario de oculos
+  showItem('oculos', 400, 184, 1.25, 9); showItem('nerd', 376, 206, 1.1, 9); showItem('neve', 424, 208, 1.0, 9);
+
+  // ----- painel de pescoco -----
+  roundRect(614, 70, 160, 132, 8); ink('#fff7e6');
+  roundRect(642, 52, 104, 24, 7); ink('#fef3c7', 2.5);
+  ctx.fillStyle = INK; ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.fillText('PESCOÇO', 694, 65);
+  ctx.textBaseline = 'alphabetic';
+  for (const hx of [646, 694, 742]) { ctx.fillStyle = '#64748b'; ell(hx, 92, 4, 4); ctx.fill(); line(hx, 92, hx, 104, '#64748b', 2.5); }
+  showItem('cachecol', 646, 132, 1.7, -8); showItem('laco', 694, 134, 1.9, -9.5); showItem('medalha', 742, 108, 1.9, -2);
+
+  // ----- porta de saida -----
+  ctx.beginPath(); ctx.moveTo(800, WALL_Y); ctx.lineTo(800, 150); ctx.quadraticCurveTo(800, 112, 838, 112);
+  ctx.quadraticCurveTo(876, 112, 876, 150); ctx.lineTo(876, WALL_Y); ctx.closePath(); ink('#7a4a25');
+  for (const dx of [819, 838, 857]) line(dx, 120, dx, 248, 'rgba(60,30,10,.4)', 2);
+  ell(838, 152, 13, 13); ink('#bfe6ff', 2.5); line(838, 140, 838, 164, INK, 2); line(826, 152, 850, 152, INK, 2);
+  ctx.fillStyle = '#ffd66b'; ell(864, 196, 4, 4); ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = INK; ctx.stroke();
+  roundRect(808, 82, 60, 22, 6); ink('#fef3c7', 2.5);
+  ctx.font = "bold 14px 'Trebuchet MS', 'Segoe UI', sans-serif"; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK; ctx.fillText('SAÍDA', 838, 94); ctx.textBaseline = 'alphabetic';
+  roundRect(792, 258, 92, 24, 7); ink('#e5484d', 2.5);
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 2; roundRect(798, 262, 80, 16, 5); ctx.stroke();
+
+  // ----- luminarias -----
+  for (const lx of [322, 598]) {
+    ctx.fillStyle = 'rgba(255,236,160,.22)'; ell(lx, 70, 44, 40); ctx.fill();
+    line(lx, 26, lx, 46, '#3b4a5e', 3);
+    poly([[lx - 17, 64], [lx - 7, 46], [lx + 7, 46], [lx + 17, 64]]); ink('#e5484d', 2.5);
+    ell(lx, 65, 9, 5); ink('#ffe07a', 2);
+  }
+
+  // ----- tapete, manequins, plantas, banco -----
+  ell(455, 440, 128, 42); ink('#f6c453');
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ell(455, 440, 112, 33); ctx.stroke();
+  ctx.setLineDash([3, 10]); ctx.lineWidth = 5; ctx.lineCap = 'round'; ell(455, 440, 92, 24); ctx.stroke(); ctx.setLineDash([]);
+  mannequin(170, 470, 1.5, ['cachecol', 'oculos', 'cartola']);
+  mannequin(730, 474, 1.5, ['medalha', 'nerd', 'coroa']);
+  plant(46, 318); plant(312, 316); plant(868, 532);
+  roundRect(560, 500, 110, 16, 6); ink('#c58a4a', 2.5);                               // banquinho comprido
+  line(574, 516, 572, 534, INK, 6); line(656, 516, 658, 534, INK, 6); line(574, 516, 572, 534, '#8a5a32', 3); line(656, 516, 658, 534, '#8a5a32', 3);
+  hangSign('Loja');
+}
+
+const PAINT = { vila: paintVila, porto: paintPorto, ilha: paintIlha, taverna: paintTaverna, loja: paintLoja };
+const SCENE_CACHE = {};
+function scene(name) {
+  if (!PAINT[name]) name = 'ilha';
+  if (!SCENE_CACHE[name]) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const screen = ctx; ctx = c.getContext('2d');
+    try { PAINT[name](); } finally { ctx = screen; }
+    SCENE_CACHE[name] = c;
+  }
+  return SCENE_CACHE[name];
+}
+
+// Neve caindo (Praca e Porto) — leve, so um enfeite por cima de tudo
+const FLAKES = [];
+{ const r = seeded(99); for (let i = 0; i < 70; i++) FLAKES.push({ x: r() * W, y: r() * H, r: 1.2 + r() * 2, v: 0.35 + r() * 0.7, p: r() * 6.28 }); }
+function drawSnowfall() {
+  const t = performance.now() / 1000;
+  ctx.fillStyle = 'rgba(255,255,255,.9)';
+  for (const f of FLAKES) {
+    f.y += f.v; if (f.y > H + 4) { f.y = -4; }
+    ell(f.x + Math.sin(t * 0.8 + f.p) * 9, f.y, f.r, f.r); ctx.fill();
+  }
+}
+
+// Corpo do personagem. Sem skin = pinguim. Toda skin usa as MESMAS medidas do pinguim
+// (corpo 20x25, olhos em y-9, pes em y+26), entao chapeus, oculos e cachecol servem igual.
+function drawBody(x, y, color, skin) {
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.beginPath(); ctx.ellipse(x,y+26,18,6,0,0,Math.PI*2); ctx.fill();
+  if (skin && SKINS[skin]) { SKINS[skin](x, y, color); return; }
+  ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(x,y,20,25,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(x,y+5,12,17,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.ellipse(x-8,y+26,6,3,0,0,Math.PI*2); ctx.ellipse(x+8,y+26,6,3,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.6,0,Math.PI*2); ctx.arc(x+6,y-9,2.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.moveTo(x-5,y-3); ctx.lineTo(x+5,y-3); ctx.lineTo(x,y+4); ctx.closePath(); ctx.fill();
+}
+
+// Altura (acima do centro) do ponto mais alto de skins que passam da cabeca (ex.: chifres)
+const SKIN_TOP = { alce: 41, cavalo: 36, unicornio: 44, coelho: 50 };
+
+// Ajuste dos oculos por skin: dy = quanto sobem, sx/sy = quanto aumentam,
+// shape = silhueta (corpo + olhos saltados) que limita o desenho. Elipses: [dx, dy, rx, ry].
+const GLASSES_FIT = {
+  sapo: { dy: -3.6, sx: 1.3, sy: 1.5, shape: [[0, 0, 20.7, 25.7], [-9, -17, 8.9, 8.9], [9, -17, 8.9, 8.9]] },
+};
+
+const SKINS = {
+  // Unicornio: branco, crina e rabo coloridos, chifre dourado; a cor do jogador fica nas orelhas.
+  unicornio(x, y, color) {
+    const FUR = '#fdfbff', EDGE = '#b3a2d4', PINK = '#f9a8d4', LILAC = '#c4b5fd', BLUE = '#93c5fd';
+    const strand = (pts, col) => { blob(pts); ctx.fillStyle = col; ctx.fill(); };
+    strand([[x + 15, y + 6], [x + 28, y + 8], [x + 32, y + 21], [x + 26, y + 31], [x + 19, y + 23], [x + 18, y + 13]], PINK);   // rabo
+    strand([[x + 16, y + 8], [x + 25, y + 10], [x + 28, y + 21], [x + 24, y + 28], [x + 19, y + 21], [x + 18, y + 13]], LILAC);
+    strand([[x + 16, y + 10], [x + 22, y + 12], [x + 24, y + 20], [x + 22, y + 25], [x + 19, y + 19], [x + 18, y + 13]], BLUE);
+    strand([[x - 5, y - 28], [x - 19, y - 25], [x - 29, y - 11], [x - 30, y + 4], [x - 21, y + 12], [x - 16, y - 4], [x - 11, y - 16]], PINK);   // crina
+    strand([[x - 6, y - 26], [x - 17, y - 23], [x - 26, y - 10], [x - 27, y + 3], [x - 20, y + 9], [x - 16, y - 4], [x - 11, y - 16]], LILAC);
+    strand([[x - 7, y - 24], [x - 15.5, y - 21], [x - 23, y - 9.5], [x - 24, y + 2], [x - 19, y + 6], [x - 16, y - 4], [x - 11, y - 16]], BLUE);
+    for (const sx of [-1, 1]) {                                           // orelhas
+      poly([[x + sx * 8, y - 22], [x + sx * 12, y - 36], [x + sx * 15.5, y - 19]]);
+      ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.strokeStyle = EDGE; ctx.stroke();
+      poly([[x + sx * 10.2, y - 22.5], [x + sx * 12.1, y - 31.5], [x + sx * 13.8, y - 21.5]]); ctx.fillStyle = color; ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 6.4, 3.5); ctx.fillStyle = '#fbbf24'; ctx.fill(); }   // cascos dourados
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = '#f1e9ff'; ell(x, y + 9, 12, 13); ctx.fill();                                  // barriga
+    poly([[x - 3.8, y - 21.5], [x, y - 44], [x + 3.8, y - 21.5]]);                                 // chifre
+    ctx.fillStyle = '#fcd34d'; ctx.fill(); ctx.lineWidth = 1.2; ctx.lineJoin = 'round'; ctx.strokeStyle = '#b45309'; ctx.stroke();
+    ctx.lineWidth = 1; ctx.beginPath();
+    for (const [ya, w] of [[-26, 3], [-31, 2.2], [-36, 1.4]]) { ctx.moveTo(x - w, y + ya + 1.5); ctx.lineTo(x + w, y + ya - 1.5); }
+    ctx.stroke();
+    strand([[x - 10, y - 24], [x - 3, y - 25.5], [x - 1, y - 19], [x - 4, y - 15], [x - 7, y - 19], [x - 11, y - 18]], PINK);   // franja
+    strand([[x + 3, y - 25.5], [x + 10, y - 23.5], [x + 10.5, y - 18], [x + 6.5, y - 19], [x + 4, y - 15.5], [x + 1.5, y - 19.5]], LILAC);
+    ctx.fillStyle = 'rgba(244,114,182,.35)'; ell(x - 13, y - 3, 3.2, 2.1); ctx.fill(); ell(x + 13, y - 3, 3.2, 2.1); ctx.fill();   // bochechas
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6.5,y-9,2.6,0,Math.PI*2); ctx.arc(x+6.5,y-9,2.6,0,Math.PI*2); ctx.fill();   // olhos
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1; ctx.lineCap = 'round'; ctx.beginPath();                                        // cilios
+    for (const sx of [-1, 1]) { ctx.moveTo(x + sx * 8.6, y - 10.6); ctx.lineTo(x + sx * 10.6, y - 12.2); ctx.moveTo(x + sx * 9, y - 9); ctx.lineTo(x + sx * 11.2, y - 9.4); }
+    ctx.stroke();
+    ell(x, y - 0.3, 8.6, 6); ctx.fillStyle = '#fbd5e5'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = EDGE; ctx.stroke();  // focinho
+    ctx.fillStyle = '#d7799f'; ell(x - 3.2, y - 1.6, 1.2, 1.6); ctx.fill(); ell(x + 3.2, y - 1.6, 1.2, 1.6); ctx.fill();
+    ctx.strokeStyle = '#d7799f'; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(x - 3.4, y + 2); ctx.quadraticCurveTo(x, y + 4.2, x + 3.4, y + 2); ctx.stroke();
+  },
+  // Macaco: pelo marrom, rosto claro, orelhas redondas dos lados, rabo enrolado; cor do jogador nas orelhas.
+  macaco(x, y, color) {
+    const FUR = '#8a5a3c', EDGE = '#55331d', SKIN = '#f2cda6';
+    const tail = () => { ctx.beginPath(); ctx.moveTo(x + 14, y + 15);
+      ctx.bezierCurveTo(x + 31, y + 16, x + 35, y - 3, x + 26, y - 4);
+      ctx.bezierCurveTo(x + 20, y - 4.5, x + 20, y + 3.5, x + 25.5, y + 2.5); ctx.stroke(); };
+    ctx.lineCap = 'round'; ctx.strokeStyle = EDGE; ctx.lineWidth = 6; tail(); ctx.strokeStyle = FUR; ctx.lineWidth = 3.4; tail();
+    blob([[x - 5, y - 23], [x - 3, y - 31], [x, y - 26], [x + 3, y - 31], [x + 5, y - 23]]);       // topete
+    ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+    for (const sx of [-1, 1]) {                                           // orelhas
+      ell(x + sx * 20.5, y - 9, 6.5, 7.5); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+      ell(x + sx * 21.4, y - 9, 3.4, 4.6); ctx.fillStyle = color; ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 7, 3.5); ctx.fillStyle = '#d9a878'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = EDGE; ctx.stroke(); }
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = SKIN; ell(x, y + 9.5, 12, 12.5); ctx.fill();                                   // barriga
+    ctx.fillStyle = SKIN;                                                                          // rosto
+    ell(x - 5.6, y - 10, 7.2, 7); ctx.fill(); ell(x + 5.6, y - 10, 7.2, 7); ctx.fill(); ell(x, y - 1, 10.5, 7.2); ctx.fill();
+    ctx.strokeStyle = 'rgba(85,51,29,.55)'; ctx.lineWidth = 1.1;                                   // separa o focinho da barriga
+    ctx.beginPath(); ctx.ellipse(x, y - 1, 10.5, 7.2, 0, Math.PI * 0.12, Math.PI * 0.88); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.5,0,Math.PI*2); ctx.arc(x+6,y-9,2.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = EDGE; ell(x - 1.7, y - 3.2, 0.9, 1.2); ctx.fill(); ell(x + 1.7, y - 3.2, 0.9, 1.2); ctx.fill();   // narinas
+    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.2; ctx.lineCap = 'round';                            // sorriso
+    ctx.beginPath(); ctx.moveTo(x - 5.4, y + 0.6); ctx.quadraticCurveTo(x, y + 5, x + 5.4, y + 0.6); ctx.stroke();
+  },
+  // Panda: branco com orelhas, bracos, patas e manchas dos olhos pretas; cor do jogador nas orelhas.
+  panda(x, y, color) {
+    const FUR = '#fbfdff', EDGE = '#8fa6bd', BLK = '#1f2430';
+    for (const sx of [-1, 1]) {                                           // orelhas
+      ell(x + sx * 13.5, y - 20, 6.8, 6.8); ctx.fillStyle = BLK; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+      ctx.fillStyle = color; ell(x + sx * 13.5, y - 20, 3.1, 3.1); ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 7, 3.6); ctx.fillStyle = BLK; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke(); }   // patas
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill();                                            // corpo
+    ctx.save(); ell(x, y, 20, 25); ctx.clip();                                                     // bracos pretos
+    ctx.fillStyle = BLK; ell(x - 19.5, y + 8, 6.5, 10.5); ctx.fill(); ell(x + 19.5, y + 8, 6.5, 10.5); ctx.fill();
+    ctx.restore();
+    ell(x, y, 20, 25); ctx.lineWidth = 1.6; ctx.strokeStyle = EDGE; ctx.stroke();
+    for (const sx of [-1, 1]) {                                           // manchas dos olhos
+      ctx.save(); ctx.translate(x + sx * 6.4, y - 8.4); ctx.rotate(sx * 0.5);
+      ell(0, 0, 4.9, 6.3); ctx.fillStyle = BLK; ctx.fill(); ctx.restore();
+    }
+    ctx.fillStyle = '#fff'; ell(x - 6, y - 9, 2.6, 2.6); ctx.fill(); ell(x + 6, y - 9, 2.6, 2.6); ctx.fill();
+    ctx.fillStyle = '#000'; ell(x - 6, y - 9, 1.5, 1.5); ctx.fill(); ell(x + 6, y - 9, 1.5, 1.5); ctx.fill();
+    ctx.fillStyle = 'rgba(244,114,182,.35)'; ell(x - 12.5, y - 1, 3.2, 2.1); ctx.fill(); ell(x + 12.5, y - 1, 3.2, 2.1); ctx.fill();
+    ctx.fillStyle = BLK; ell(x, y - 2.6, 2.9, 2.1); ctx.fill();                                    // nariz
+    ctx.strokeStyle = BLK; ctx.lineWidth = 1.1; ctx.lineCap = 'round';                             // boca
+    ctx.beginPath(); ctx.moveTo(x, y - 0.8); ctx.lineTo(x, y + 1.2);
+    ctx.quadraticCurveTo(x - 2, y + 3.2, x - 3.6, y + 1.8);
+    ctx.moveTo(x, y + 1.2); ctx.quadraticCurveTo(x + 2, y + 3.2, x + 3.6, y + 1.8); ctx.stroke();
+  },
+  // Coelho: pelo bege, orelhas compridas, dentinhos, rabo de pompom; cor do jogador dentro das orelhas.
+  coelho(x, y, color) {
+    const FUR = '#ead7bf', EDGE = '#a3835f';
+    ell(x + 19, y + 17, 6.5, 6.5); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = '#c4b199'; ctx.stroke();   // rabo
+    for (const sx of [-1, 1]) {                                           // orelhas compridas
+      ctx.save(); ctx.translate(x + sx * 8.5, y - 35); ctx.rotate(sx * 0.16);
+      ell(0, 0, 5.2, 14.5); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+      ell(0, 1.5, 2.6, 10.5); ctx.fillStyle = color; ctx.fill();
+      ctx.restore();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8.5, y + 26, 8, 3.8); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = EDGE; ctx.stroke(); }
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = '#fffaf3'; ell(x, y + 9, 12, 13); ctx.fill();                                  // barriga
+    ctx.fillStyle = 'rgba(244,114,182,.35)'; ell(x - 13, y - 3, 3.2, 2.1); ctx.fill(); ell(x + 13, y - 3, 3.2, 2.1); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.6,0,Math.PI*2); ctx.arc(x+6,y-9,2.6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = EDGE; ctx.lineWidth = 0.9; ctx.lineCap = 'round'; ctx.beginPath();           // bigodes
+    for (const sx of [-1, 1]) { ctx.moveTo(x + sx * 8.5, y - 0.8); ctx.lineTo(x + sx * 16, y - 2.6); ctx.moveTo(x + sx * 8.5, y + 1); ctx.lineTo(x + sx * 16, y + 2.4); }
+    ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = EDGE; ctx.lineWidth = 1;                             // dentinhos
+    ctx.beginPath(); ctx.rect(x - 2.5, y + 2, 2.5, 4.4); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(x, y + 2, 2.5, 4.4); ctx.fill(); ctx.stroke();
+    for (const sx of [-1, 1]) { ell(x + sx * 4, y + 0.2, 5, 4); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = EDGE; ctx.stroke(); }
+    ctx.fillStyle = '#fff'; ell(x, y + 0.2, 3.4, 3.2); ctx.fill();
+    poly([[x - 2.6, y - 4.4], [x + 2.6, y - 4.4], [x, y - 1.4]]); ctx.fillStyle = '#f48fb1'; ctx.fill();   // nariz
+  },
+  // Sapo: verde, olhos saltados no alto da cabeca, sorrisao; a cor do jogador fica nas pintas.
+  sapo(x, y, color) {
+    const FUR = '#62c462', EDGE = '#2f7a36';
+    for (const sx of [-1, 1]) {                                           // pes de pato
+      ell(x + sx * 9, y + 26, 8.6, 3.8); ctx.fillStyle = '#3f9f48'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = EDGE; ctx.stroke();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 9, y - 17, 8.2, 8.2); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke(); }
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    for (const sx of [-1, 1]) { ell(x + sx * 9, y - 17, 7.4, 7.4); ctx.fillStyle = FUR; ctx.fill(); }   // junta olho e corpo
+    ctx.save(); ell(x, y, 20, 25); ctx.clip(); ctx.globalAlpha = 0.6; ctx.fillStyle = color;       // pintas
+    ell(x - 15.5, y + 8, 3.4, 4.4); ctx.fill(); ell(x + 15.5, y + 13, 3, 3.8); ctx.fill(); ell(x + 16.5, y + 2, 2.4, 3); ctx.fill(); ell(x - 16, y - 2, 2, 2.6); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = '#dcf5b8'; ell(x, y + 9.5, 12, 12.5); ctx.fill();                              // barriga
+    for (const sx of [-1, 1]) { ell(x + sx * 7.8, y - 12.5, 5.7, 5.7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = EDGE; ctx.stroke(); }
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6.6,y-10.6,2.6,0,Math.PI*2); ctx.arc(x+6.6,y-10.6,2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(244,114,182,.4)'; ell(x - 13, y + 0.5, 3.2, 2.1); ctx.fill(); ell(x + 13, y + 0.5, 3.2, 2.1); ctx.fill();
+    ctx.fillStyle = EDGE; ell(x - 2, y - 4.4, 0.9, 0.9); ctx.fill(); ell(x + 2, y - 4.4, 0.9, 0.9); ctx.fill();   // narinas
+    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.5; ctx.lineCap = 'round';                            // sorrisao
+    ctx.beginPath(); ctx.moveTo(x - 10, y - 1.4); ctx.quadraticCurveTo(x, y + 6.5, x + 10, y - 1.4); ctx.stroke();
+  },
+  // Cavalo: pelo caramelo, crina e rabo escuros, orelhas em pe, listra branca na testa;
+  // a cor do jogador fica nas orelhas.
+  cavalo(x, y, color) {
+    const FUR = '#c9843f', EDGE = '#7a4514', HAIR = '#3b2413';
+    const hair = (pts) => { blob(pts); ctx.fillStyle = HAIR; ctx.fill(); ctx.lineWidth = 1.2; ctx.lineJoin = 'round'; ctx.strokeStyle = '#24150b'; ctx.stroke(); };
+    hair([[x + 15, y + 6], [x + 27, y + 9], [x + 30, y + 21], [x + 25, y + 30], [x + 19, y + 23], [x + 18, y + 13]]);   // rabo
+    hair([[x - 5, y - 27], [x - 17, y - 23], [x - 24, y - 10], [x - 25, y + 3], [x - 19, y + 9], [x - 16, y - 4], [x - 11, y - 16]]);  // crina
+    for (const sx of [-1, 1]) {                                           // orelhas em pe
+      poly([[x + sx * 8, y - 22], [x + sx * 12, y - 36], [x + sx * 15.5, y - 19]]);
+      ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.strokeStyle = EDGE; ctx.stroke();
+      poly([[x + sx * 10.2, y - 22.5], [x + sx * 12.1, y - 31.5], [x + sx * 13.8, y - 21.5]]); ctx.fillStyle = color; ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 6.4, 3.5); ctx.fillStyle = '#2f2a26'; ctx.fill(); }   // cascos
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = '#e3ac6c'; ell(x, y + 9, 12, 13); ctx.fill();                                  // barriga
+    ctx.fillStyle = '#fff'; ell(x, y - 11, 3, 9); ctx.fill();                                      // listra branca
+    hair([[x - 8, y - 24.5], [x + 2, y - 26.5], [x + 7, y - 21], [x + 2, y - 15.5], [x - 2, y - 19.5], [x - 8, y - 18]]);  // franja
+    ctx.fillStyle = '#fff'; ell(x - 6.5, y - 9, 3.5, 3.5); ctx.fill(); ell(x + 6.5, y - 9, 3.5, 3.5); ctx.fill();   // olhos
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6.5,y-9,2.3,0,Math.PI*2); ctx.arc(x+6.5,y-9,2.3,0,Math.PI*2); ctx.fill();
+    ell(x, y - 0.3, 8.6, 6); ctx.fillStyle = '#f3ddc6'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = EDGE; ctx.stroke();  // focinho
+    ctx.fillStyle = '#6b4a3a'; ell(x - 3.2, y - 1.6, 1.3, 1.7); ctx.fill(); ell(x + 3.2, y - 1.6, 1.3, 1.7); ctx.fill();   // narinas
+    ctx.strokeStyle = '#6b4a3a'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';                                              // sorriso
+    ctx.beginPath(); ctx.moveTo(x - 3.4, y + 2); ctx.quadraticCurveTo(x, y + 4.2, x + 3.4, y + 2); ctx.stroke();
+  },
+  // Castor: pelo castanho, dentoes, rabo achatado quadriculado; a cor do jogador fica nas orelhas.
+  castor(x, y, color) {
+    const FUR = '#a8683a', EDGE = '#5f3a1c', DARK = '#5b3a22';
+    ctx.save(); ctx.translate(x + 17, y + 19); ctx.rotate(-0.5);          // rabo (atras do corpo)
+    ell(0, 0, 13.5, 7.5); ctx.fillStyle = DARK; ctx.fill();
+    ctx.save(); ell(0, 0, 13.5, 7.5); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 1; ctx.beginPath();
+    for (let k = -24; k <= 24; k += 5) { ctx.moveTo(k - 8, -9); ctx.lineTo(k + 8, 9); ctx.moveTo(k + 8, -9); ctx.lineTo(k - 8, 9); }
+    ctx.stroke(); ctx.restore();
+    ell(0, 0, 13.5, 7.5); ctx.lineWidth = 1.4; ctx.strokeStyle = '#3b2413'; ctx.stroke();
+    ctx.restore();
+    for (const sx of [-1, 1]) {                                           // orelhas
+      ell(x + sx * 13, y - 20.5, 5, 5); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+      ctx.fillStyle = color; ell(x + sx * 13, y - 20.5, 2.6, 2.6); ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 7, 3.5); ctx.fillStyle = '#4a2f1b'; ctx.fill(); }   // pes
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = '#e3b98a'; ell(x, y + 9, 12, 13); ctx.fill();                                  // barriga
+    ctx.fillStyle = '#fff'; ell(x - 6, y - 9, 3.5, 3.5); ctx.fill(); ell(x + 6, y - 9, 3.5, 3.5); ctx.fill();   // olhos
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.3,0,Math.PI*2); ctx.arc(x+6,y-9,2.3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = EDGE; ctx.lineWidth = 1;                            // dentoes
+    ctx.beginPath(); ctx.rect(x - 3.3, y + 1.5, 3.3, 5.6); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(x, y + 1.5, 3.3, 5.6); ctx.fill(); ctx.stroke();
+    for (const sx of [-1, 1]) {                                           // bochechas do focinho
+      ell(x + sx * 4.6, y - 0.6, 6, 4.6); ctx.fillStyle = '#edd0a8'; ctx.fill(); ctx.lineWidth = 1.1; ctx.strokeStyle = EDGE; ctx.stroke();
+    }
+    ctx.fillStyle = '#edd0a8'; ell(x, y - 0.6, 4, 3.8); ctx.fill();       // junta as duas bochechas
+    ctx.fillStyle = EDGE;                                                 // pintinhas dos bigodes
+    for (const sx of [-1, 1]) for (const [dx, dy] of [[5, -1.4], [7.4, 0], [5.4, 1.4]]) { ell(x + sx * dx, y + dy, 0.55, 0.55); ctx.fill(); }
+    ctx.fillStyle = '#2a1a10'; ell(x, y - 3.6, 3.3, 2.3); ctx.fill();     // nariz
+  },
+  // Alce: pelo marrom, chifres largos, focinho grande; a cor do jogador fica nas orelhas.
+  alce(x, y, color) {
+    const FUR = '#8b5e34', EDGE = '#5a3a1c', HORN = '#e2c08d', HORN_EDGE = '#8a6a3c';
+    for (const sx of [-1, 1]) {                                   // chifres
+      poly([[x + sx * 10, y - 20], [x + sx * 15, y - 27], [x + sx * 13, y - 37], [x + sx * 18.5, y - 31],
+            [x + sx * 21, y - 41], [x + sx * 24.5, y - 32], [x + sx * 30, y - 37], [x + sx * 28.5, y - 27],
+            [x + sx * 22, y - 22], [x + sx * 14, y - 18]]);
+      ctx.fillStyle = HORN; ctx.fill(); ctx.lineWidth = 1.4; ctx.lineJoin = 'round'; ctx.strokeStyle = HORN_EDGE; ctx.stroke();
+    }
+    for (const sx of [-1, 1]) {                                   // orelhas
+      ctx.save(); ctx.translate(x + sx * 18.5, y - 13.5); ctx.rotate(sx * -0.45);
+      ell(0, 0, 6.5, 3.6); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();
+      ell(sx * 0.6, 0, 3.6, 1.8); ctx.fillStyle = color; ctx.fill();
+      ctx.restore();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 6.6, 3.5); ctx.fillStyle = '#3b2a1a'; ctx.fill(); }   // cascos
+    ell(x, y, 20, 25); ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = EDGE; ctx.stroke();  // corpo
+    ctx.fillStyle = '#b88a5c'; ell(x, y + 9, 12, 13); ctx.fill();                                  // barriga
+    ctx.fillStyle = '#fff'; ell(x - 6, y - 9, 3.5, 3.5); ctx.fill(); ell(x + 6, y - 9, 3.5, 3.5); ctx.fill();   // olhos
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.3,0,Math.PI*2); ctx.arc(x+6,y-9,2.3,0,Math.PI*2); ctx.fill();
+    ell(x, y - 0.5, 9.5, 6); ctx.fillStyle = '#e2c08d'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = EDGE; ctx.stroke();  // focinho
+    ctx.fillStyle = EDGE; ell(x - 3.4, y - 2, 1.5, 1.1); ctx.fill(); ell(x + 3.4, y - 2, 1.5, 1.1); ctx.fill();  // narinas
+    ctx.strokeStyle = EDGE; ctx.lineWidth = 1.1; ctx.lineCap = 'round';                                          // sorriso
+    ctx.beginPath(); ctx.moveTo(x - 3.6, y + 1.6); ctx.quadraticCurveTo(x, y + 4, x + 3.6, y + 1.6); ctx.stroke();
+  },
+  // Urso polar: pelo branco com contorno (pra aparecer na neve); a cor do jogador fica nas orelhas.
+  urso(x, y, color) {
+    const FUR = '#fbfdff', EDGE = '#8fa6bd';
+    const fur = (lw = 1.6) => { ctx.fillStyle = FUR; ctx.fill(); ctx.lineWidth = lw; ctx.strokeStyle = EDGE; ctx.stroke(); };
+    for (const sx of [-1, 1]) {                                   // orelhas
+      ell(x + sx * 13.5, y - 20, 6.5, 6.5); fur();
+      ctx.fillStyle = color; ell(x + sx * 13.5, y - 20, 3.4, 3.4); ctx.fill();
+    }
+    for (const sx of [-1, 1]) { ell(x + sx * 8, y + 26, 7, 3.6); fur(1.4); }      // patas
+    ell(x, y, 20, 25); fur();                                     // corpo
+    ctx.fillStyle = '#e6edf5'; ell(x, y + 8, 12, 14); ctx.fill(); // barriga
+    for (const sx of [-1, 1]) {                                   // dedinhos das patas
+      ctx.strokeStyle = EDGE; ctx.lineWidth = 1; ctx.beginPath();
+      ctx.moveTo(x + sx * 6, y + 26.5); ctx.lineTo(x + sx * 6, y + 28.6);
+      ctx.moveTo(x + sx * 10, y + 26.5); ctx.lineTo(x + sx * 10, y + 28.6); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(244,114,182,.35)';                      // bochechas
+    ell(x - 12, y - 3, 3.4, 2.2); ctx.fill(); ell(x + 12, y - 3, 3.4, 2.2); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(x-6,y-9,2.6,0,Math.PI*2); ctx.arc(x+6,y-9,2.6,0,Math.PI*2); ctx.fill();
+    ell(x, y - 1, 7.5, 5.6); ctx.fillStyle = '#eef3f8'; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = EDGE; ctx.stroke();  // focinho
+    ctx.fillStyle = '#111827'; ell(x, y - 3.4, 3.1, 2.2); ctx.fill();          // nariz
+    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.1; ctx.lineCap = 'round';   // boca
+    ctx.beginPath(); ctx.moveTo(x, y - 1.4); ctx.lineTo(x, y + 0.6);
+    ctx.quadraticCurveTo(x - 2, y + 2.6, x - 3.6, y + 1.2);
+    ctx.moveTo(x, y + 0.6); ctx.quadraticCurveTo(x + 2, y + 2.6, x + 3.6, y + 1.2); ctx.stroke();
+  },
+};
+
+function drawPenguin(p) {
+  const x = p.x, y = p.y;
+  drawBody(x, y, p.color, (p.outfit || {}).skin);
+  // roupas (itens da loja)
+  const out = p.outfit || {};
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  // Cada item e desenhado sob medida pro corpo do pinguim (nao depende do emoji do aparelho).
+  if (out.neck) {
+    if (WEAR[out.neck]) WEAR[out.neck](x, y);
+    else if (CATALOG[out.neck]) { ctx.font = '13px serif'; ctx.fillText(CATALOG[out.neck].icon, x, y+11); }
+  }
+  if (out.glasses) {
+    const fit = GLASSES_FIT[out.skin];
+    if (WEAR[out.glasses] && fit) {
+      // Skins com olhos fora do padrao: sobe e aumenta os oculos, sem deixar passar do corpo.
+      ctx.save();
+      ctx.beginPath();
+      for (const [dx, dy, rx, ry] of fit.shape) { ctx.moveTo(x + dx + rx, y + dy); ctx.ellipse(x + dx, y + dy, rx, ry, 0, 0, Math.PI * 2); }
+      ctx.clip();
+      ctx.translate(x, y - 9 + fit.dy); ctx.scale(fit.sx, fit.sy);
+      WEAR[out.glasses](0, 9);
+      ctx.restore();
+    }
+    else if (WEAR[out.glasses]) WEAR[out.glasses](x, y);
+    else if (CATALOG[out.glasses]) { ctx.font = '13px serif'; ctx.fillText(CATALOG[out.glasses].icon, x, y-9); }
+  }
+  if (out.hat) {
+    if (WEAR[out.hat]) WEAR[out.hat](x, y);
+    else if (CATALOG[out.hat]) { ctx.font = '16px serif'; ctx.fillText(CATALOG[out.hat].icon, x, y-27); }
+  }
+  ctx.textBaseline = 'alphabetic';
+  // Sobe o nome / emote / balao pra nao ficar em cima do chapeu
+  const lift = Math.max(out.hat ? (HAT_TOP[out.hat] ?? 34) : 25, SKIN_TOP[out.skin] ?? 25) - 25;
+  const ly = y - lift;
+  // nome
+  ctx.font = '12px Segoe UI'; ctx.textAlign = 'center';
+  const nw = ctx.measureText(p.name).width + 12;
+  ctx.fillStyle = 'rgba(0,0,0,.45)'; roundRect(x-nw/2, ly-46, nw, 18, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.fillText(p.name, x, ly-33);
+  // emote
+  if (p.emote && performance.now() - p.emoteT < 2200) {
+    ctx.font = '26px serif'; ctx.fillText(p.emote, x, ly-52);
+  }
+  // balao de chat
+  if (p.msg && performance.now() - p.msgT < 5000) {
+    ctx.font = '13px Segoe UI';
+    const bw = Math.min(220, ctx.measureText(p.msg).width + 18);
+    ctx.fillStyle = '#fff'; roundRect(x-bw/2, ly-78, bw, 24, 8); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x-6,ly-55); ctx.lineTo(x+6,ly-55); ctx.lineTo(x,ly-46); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.fillText(p.msg, x, ly-61);
+  }
+}
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+// Cachecol desenhado (envolve o pescoco, com pontinha caindo na frente)
+function drawScarf(x, y) {
+  const main = '#e23b3b', light = '#f8c2c2';
+  // banda em volta do pescoco (segue a curva do corpo)
+  ctx.fillStyle = main;
+  ctx.beginPath(); ctx.ellipse(x, y + 6, 16, 6, 0, 0, Math.PI * 2); ctx.fill();
+  // listra clara
+  ctx.fillStyle = light;
+  ctx.beginPath(); ctx.ellipse(x, y + 7.5, 16, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+  // ponta caindo na frente
+  ctx.fillStyle = main;
+  ctx.beginPath();
+  ctx.moveTo(x + 3, y + 8); ctx.lineTo(x + 12, y + 9);
+  ctx.lineTo(x + 10, y + 22); ctx.lineTo(x + 1, y + 21);
+  ctx.closePath(); ctx.fill();
+  // franja na ponta
+  ctx.fillStyle = light; ctx.fillRect(x + 1, y + 19, 10, 3);
+}
+
+// ---------- Roupas desenhadas sob medida ----------
+// Medidas do pinguim: corpo = elipse 20x25 em (x,y); topo da cabeca em y-25;
+// olhos em (x±6, y-9); bico de y-3 a y+4; pescoco por volta de y+6.
+function ell(cx, cy, rx, ry, a0 = 0, a1 = Math.PI * 2) {
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, a0, a1); ctx.closePath();
+}
+function poly(pts) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+}
+// Altura (acima do centro) do ponto mais alto de cada chapeu
+const HAT_TOP = { bone: 30, cartola: 38, coroa: 33, gorro: 37, capacete: 31, festa: 44 };
+
+const WEAR = {
+  // ----- chapeus -----
+  bone(x, y) {
+    ctx.fillStyle = '#1e40af';                                   // aba
+    ell(x + 12, y - 17.5, 11, 2.6); ctx.fill();
+    ctx.fillStyle = '#2563eb';                                   // copa
+    ell(x, y - 17, 13.5, 12, Math.PI, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#1e40af'; ctx.lineWidth = 1;              // costuras
+    ctx.beginPath(); ctx.moveTo(x, y - 29); ctx.quadraticCurveTo(x - 5, y - 24, x - 6, y - 17.5);
+    ctx.moveTo(x, y - 29); ctx.quadraticCurveTo(x + 5, y - 24, x + 6, y - 17.5); ctx.stroke();
+    ctx.fillStyle = '#93c5fd'; ell(x, y - 29, 1.6, 1.3); ctx.fill();   // botao
+  },
+  cartola(x, y) {
+    ctx.fillStyle = '#111827';
+    ell(x, y - 19, 16, 3.4); ctx.fill();                         // aba
+    ctx.fillRect(x - 10, y - 36, 20, 17);                        // copa
+    ell(x, y - 36, 10, 2.2); ctx.fill();                         // tampa
+    ctx.fillStyle = '#374151'; ell(x, y - 36, 8.4, 1.4); ctx.fill();
+    ctx.fillStyle = '#dc2626'; ctx.fillRect(x - 10, y - 24.5, 20, 4);  // faixa
+  },
+  coroa(x, y) {
+    ctx.fillStyle = '#fbbf24'; ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1;
+    poly([[x - 11, y - 18], [x - 12.5, y - 30], [x - 6.5, y - 24.5], [x, y - 33],
+          [x + 6.5, y - 24.5], [x + 12.5, y - 30], [x + 11, y - 18]]);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#f59e0b'; ctx.fillRect(x - 11, y - 21.5, 22, 3.5);  // base
+    ctx.fillStyle = '#ef4444'; ell(x, y - 24.5, 1.9, 1.9); ctx.fill();   // joias
+    ctx.fillStyle = '#3b82f6'; ell(x - 7, y - 20, 1.4, 1.4); ctx.fill(); ell(x + 7, y - 20, 1.4, 1.4); ctx.fill();
+    ctx.fillStyle = '#fef3c7';
+    for (const [px, py] of [[-12.5, -30], [0, -33], [12.5, -30]]) { ell(x + px, y + py, 1.6, 1.6); ctx.fill(); }
+  },
+  gorro(x, y) {
+    ctx.fillStyle = '#dc2626';
+    ell(x, y - 18, 14, 14, Math.PI, Math.PI * 2); ctx.fill();    // touca
+    ctx.strokeStyle = '#991b1b'; ctx.lineWidth = 1;              // trico
+    ctx.beginPath();
+    for (const dx of [-7, 0, 7]) { ctx.moveTo(x + dx, y - 21); ctx.lineTo(x + dx * 0.55, y - 30); }
+    ctx.stroke();
+    ctx.fillStyle = '#f8fafc'; roundRect(x - 15, y - 22, 30, 6, 3); ctx.fill();   // barra
+    ctx.fillStyle = '#f8fafc'; ell(x, y - 33, 4, 4); ctx.fill();                  // pompom
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = .8; ell(x, y - 33, 4, 4); ctx.stroke();
+  },
+  capacete(x, y) {
+    ctx.fillStyle = '#ef4444';
+    ell(x, y - 17, 15, 14, Math.PI, Math.PI * 2); ctx.fill();    // casco
+    ctx.fillStyle = '#b91c1c'; roundRect(x - 17, y - 19.5, 34, 4, 2); ctx.fill();  // aba
+    ctx.fillStyle = '#fff';                                      // cruz
+    ctx.fillRect(x - 1.6, y - 28.5, 3.2, 8); ctx.fillRect(x - 4, y - 26.1, 8, 3.2);
+  },
+  festa(x, y) {
+    const cone = [[x - 9, y - 18.5], [x, y - 41], [x + 9, y - 18.5]];
+    ctx.fillStyle = '#ec4899'; poly(cone); ctx.fill();
+    ctx.save(); poly(cone); ctx.clip();                          // listras
+    ctx.strokeStyle = '#fde047'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) { ctx.moveTo(x - 12, y - 20 - k * 6.5); ctx.lineTo(x + 12, y - 25 - k * 6.5); }
+    ctx.stroke(); ctx.restore();
+    ctx.fillStyle = '#38bdf8'; ell(x, y - 18.5, 9.5, 2); ctx.fill();   // barra
+    ctx.fillStyle = '#fde047'; ell(x, y - 41, 3, 3); ctx.fill();       // pompom
+  },
+  // ----- oculos -----
+  oculos(x, y) {
+    ctx.fillStyle = '#0b0f19';
+    roundRect(x - 12, y - 12.5, 10.5, 7, 2.6); ctx.fill();
+    roundRect(x + 1.5, y - 12.5, 10.5, 7, 2.6); ctx.fill();
+    ctx.fillRect(x - 2, y - 11.6, 4, 1.6);                       // ponte
+    ctx.strokeStyle = '#0b0f19'; ctx.lineWidth = 1.4;            // hastes
+    ctx.beginPath(); ctx.moveTo(x - 12, y - 10.6); ctx.lineTo(x - 17.5, y - 11.6);
+    ctx.moveTo(x + 12, y - 10.6); ctx.lineTo(x + 17.5, y - 11.6); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.4)';                      // brilho
+    ctx.fillRect(x - 10, y - 11.3, 3, 1.2); ctx.fillRect(x + 3.5, y - 11.3, 3, 1.2);
+  },
+  neve(x, y) {
+    ctx.fillStyle = '#334155'; ctx.fillRect(x - 18.5, y - 11.5, 37, 4);   // elastico
+    ctx.fillStyle = '#1e293b'; roundRect(x - 13.5, y - 15, 27, 11, 4.5); ctx.fill();  // armacao
+    const g = ctx.createLinearGradient(x - 11, y - 14, x + 11, y - 5);
+    g.addColorStop(0, '#fb923c'); g.addColorStop(1, '#38bdf8');
+    ctx.fillStyle = g; roundRect(x - 11.5, y - 13.2, 23, 7.4, 3.2); ctx.fill();       // lente
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fillRect(x - 9, y - 12, 5, 1.4);
+  },
+  nerd(x, y) {
+    ctx.fillStyle = 'rgba(186,230,253,.3)';
+    ell(x - 6, y - 9, 5, 5); ctx.fill(); ell(x + 6, y - 9, 5, 5); ctx.fill();
+    ctx.strokeStyle = '#111827'; ctx.lineWidth = 1.5;
+    ell(x - 6, y - 9, 5, 5); ctx.stroke(); ell(x + 6, y - 9, 5, 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 1.2, y - 9.6); ctx.lineTo(x + 1.2, y - 9.6);     // ponte
+    ctx.moveTo(x - 11, y - 9.6); ctx.lineTo(x - 17.5, y - 11);                       // hastes
+    ctx.moveTo(x + 11, y - 9.6); ctx.lineTo(x + 17.5, y - 11); ctx.stroke();
+  },
+  // ----- pescoco -----
+  cachecol(x, y) { drawScarf(x, y); },
+  laco(x, y) {
+    const cy = y + 9.5;
+    ctx.fillStyle = '#ec4899'; ctx.strokeStyle = '#be185d'; ctx.lineWidth = .8;
+    poly([[x - 1.5, cy], [x - 9.5, cy - 5], [x - 9.5, cy + 5]]); ctx.fill(); ctx.stroke();
+    poly([[x + 1.5, cy], [x + 9.5, cy - 5], [x + 9.5, cy + 5]]); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#be185d'; roundRect(x - 2.4, cy - 2.6, 4.8, 5.2, 1.6); ctx.fill();  // no
+  },
+  medalha(x, y) {
+    ctx.fillStyle = '#2563eb';                                   // fita em V
+    poly([[x - 11, y + 3], [x - 7.5, y + 2.4], [x + 1.4, y + 13], [x - 1.4, y + 14.5]]); ctx.fill();
+    ctx.fillStyle = '#dc2626';
+    poly([[x + 11, y + 3], [x + 7.5, y + 2.4], [x - 1.4, y + 13], [x + 1.4, y + 14.5]]); ctx.fill();
+    ctx.fillStyle = '#fbbf24'; ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1;
+    ell(x, y + 17, 4.8, 4.8); ctx.fill(); ctx.stroke();          // medalha
+    ctx.fillStyle = '#fef3c7'; ell(x, y + 17, 2, 2); ctx.fill();
+  },
+};
+
+function loop() {
+  ctx.drawImage(scene(myRoom), 0, 0);
+  if (myRoom === 'taverna') drawFire();
+
+  // interpola movimento
+  for (const id in players) {
+    const p = players[id];
+    p.x += (p.tx - p.x) * 0.18;
+    p.y += (p.ty - p.y) * 0.18;
+  }
+  checkDoor();
+  // desenha por ordem de Y (profundidade)
+  Object.values(players).sort((a,b) => a.y - b.y).forEach(drawPenguin);
+  if (myRoom === 'vila' || myRoom === 'porto') drawSnowfall();
+
+  // bolas de neve
+  for (let i = balls.length - 1; i >= 0; i--) {
+    const b = balls[i]; b.t += 0.04;
+    const bx = b.x + (b.tx - b.x) * b.t;
+    const by = b.y + (b.ty - b.y) * b.t - Math.sin(Math.PI * b.t) * 40;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath(); ctx.arc(bx, by, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    if (b.t >= 1) {
+      ctx.fillStyle = 'rgba(255,255,255,.6)';
+      ctx.beginPath(); ctx.arc(b.tx, b.ty, 12, 0, Math.PI*2); ctx.fill();
+      balls.splice(i, 1);
+    }
+  }
+  if (!online) {                                       // aviso enquanto reconecta
+    ctx.fillStyle = 'rgba(15,23,42,.55)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff'; ctx.font = "bold 22px 'Trebuchet MS', 'Segoe UI', sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Reconectando…', W / 2, H / 2); ctx.textBaseline = 'alphabetic';
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
